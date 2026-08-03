@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>惠州五年级每日练</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body {
+    font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    background:#f2f6f4; color:#2f3b34; font-size:18px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app { max-width:560px; margin:0 auto; min-height:100%; padding:18px 16px 40px; }
+  .hidden { display:none !important; }
+
+  /* 顶部 */
+  .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .topbar .logo { font-size:24px; font-weight:800; color:#2f7d5d; }
+  .topbar .sub { font-size:13px; color:#7b8a80; margin-top:2px; }
+  .flower-badge {
+    background:#fff; border:2px solid #f3c74f; color:#b8860b;
+    padding:6px 14px; border-radius:999px; font-size:16px; font-weight:700;
+    display:flex; align-items:center; gap:6px;
+  }
+  .flower-badge .icon { font-size:20px; }
+
+  /* 卡片 */
+  .card {
+    background:#fff; border-radius:18px; padding:18px;
+    box-shadow:0 2px 10px rgba(47,61,52,.06);
+    margin-bottom:14px;
+  }
+
+  /* 今日进度 */
+  .today-line { font-size:17px; font-weight:700; color:#2f3b34; margin-bottom:4px; }
+  .today-progress { display:flex; gap:8px; margin-top:10px; }
+  .tseg { flex:1; height:12px; border-radius:8px; background:#e6ece8; overflow:hidden; }
+  .tseg.done { background:#2f7d5d; }
+
+  /* 三科卡片 */
+  .subjects { display:flex; flex-direction:column; gap:12px; }
+  .subj-card {
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff; border-radius:18px; padding:18px 20px; cursor:pointer;
+    border:2px solid transparent; box-shadow:0 2px 10px rgba(47,61,52,.06);
+    transition:transform .08s ease;
+  }
+  .subj-card:active { transform:scale(.98); }
+  .subj-left { display:flex; align-items:center; gap:14px; }
+  .subj-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff; font-weight:800; }
+  .yw .subj-icon { background:#e88a6a; }
+  .sx .subj-icon { background:#4a90d9; }
+  .en .subj-icon { background:#58a97c; }
+  .subj-name { font-size:20px; font-weight:800; }
+  .subj-desc { font-size:13px; color:#8a978e; margin-top:2px; }
+  .subj-state {
+    font-size:14px; font-weight:700; padding:5px 12px; border-radius:999px;
+    background:#eef2ef; color:#7b8a80;
+  }
+  .subj-state.done { background:#dff0e6; color:#2f7d5d; }
+
+  /* 日历 */
+  .cal-title { font-size:17px; font-weight:800; margin-bottom:10px; color:#2f3b34; }
+  .cal-week { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:13px; color:#8a978e; margin-bottom:6px; }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+  .cal-cell {
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    border-radius:10px; font-size:15px; color:#2f3b34; position:relative;
+  }
+  .cal-cell.empty { visibility:hidden; }
+  .cal-cell.today { background:#2f7d5d; color:#fff; font-weight:800; }
+  .cal-cell.checked { background:#dff0e6; color:#2f7d5d; font-weight:700; }
+  .cal-cell.today.checked { background:#2f7d5d; color:#fff; }
+  .cal-cell.checked::after {
+    content:""; position:absolute; bottom:4px; left:50%; transform:translateX(-50%);
+    width:6px; height:6px; border-radius:50%; background:#f3c74f;
+  }
+  .cal-cell.today.checked::after { background:#f3c74f; }
+
+  /* 鼓励语 */
+  .cheer {
+    background:linear-gradient(135deg,#fff6e0,#fff); border:2px solid #f3c74f;
+    border-radius:16px; padding:14px 18px; font-size:17px; font-weight:800; color:#b8860b;
+    text-align:center;
+  }
+
+  /* 章节页 */
+  .page-title { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .back-btn {
+    background:#fff; border:none; border-radius:12px; padding:8px 14px;
+    font-size:15px; font-weight:700; color:#2f7d5d; cursor:pointer;
+    box-shadow:0 2px 8px rgba(47,61,52,.08);
+  }
+  .page-title h1 { font-size:22px; font-weight:800; }
+  .part-label { font-size:15px; font-weight:800; color:#2f7d5d; margin:14px 2px 8px; }
+  .chapter-list { display:flex; flex-direction:column; gap:8px; }
+  .chapter-item {
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff; border-radius:14px; padding:14px 16px; cursor:pointer;
+    box-shadow:0 2px 8px rgba(47,61,52,.05);
+  }
+  .chapter-item:active { transform:scale(.98); }
+  .chapter-name { font-size:16px; font-weight:700; }
+  .chapter-badge {
+    font-size:13px; font-weight:700; padding:4px 10px; border-radius:999px; white-space:nowrap;
+  }
+  .badge-new { background:#eef2ef; color:#7b8a80; }
+  .badge-ing { background:#e8f1fb; color:#2f6fb8; }
+  .badge-ok { background:#dff0e6; color:#2f7d5d; }
+
+  /* 做题页 */
+  .quiz-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .quiz-progress { font-size:15px; font-weight:700; color:#7b8a80; }
+  .progress-track { height:10px; background:#e6ece8; border-radius:8px; overflow:hidden; margin-bottom:16px; }
+  .progress-fill { height:100%; background:#2f7d5d; border-radius:8px; transition:width .2s ease; }
+  .quiz-card { background:#fff; border-radius:18px; padding:22px 20px; box-shadow:0 2px 10px rgba(47,61,52,.06); }
+  .quiz-chapter { font-size:13px; color:#8a978e; margin-bottom:8px; }
+  .quiz-q { font-size:19px; font-weight:700; line-height:1.6; margin-bottom:18px; }
+  .option {
+    display:block; width:100%; text-align:left;
+    background:#f6f9f7; border:2px solid #e3eae6; border-radius:14px;
+    padding:14px 16px; margin-bottom:10px; font-size:17px; color:#2f3b34; cursor:pointer;
+    transition:border-color .1s, background .1s;
+  }
+  .option.correct { background:#dff0e6; border-color:#2f7d5d; color:#2f7d5d; font-weight:700; }
+  .option.wrong { background:#fdeaea; border-color:#d95555; color:#d95555; }
+  .option.disabled { pointer-events:none; }
+  .fill-box { display:flex; gap:10px; margin-bottom:14px; }
+  .fill-input {
+    flex:1; font-size:19px; padding:13px 14px; border:2px solid #e3eae6; border-radius:12px;
+    outline:none; color:#2f3b34; background:#f6f9f7;
+  }
+  .fill-input:focus { border-color:#2f7d5d; }
+  .btn {
+    background:#2f7d5d; color:#fff; border:none; border-radius:14px;
+    padding:14px 20px; font-size:18px; font-weight:800; cursor:pointer; width:100%;
+  }
+  .btn:active { transform:scale(.98); }
+  .btn.secondary { background:#eef2ef; color:#2f3b34; }
+  .btn.gray { background:#cfd8d2; color:#2f3b34; }
+  .feedback { margin-top:14px; padding:12px 14px; border-radius:12px; font-size:16px; font-weight:700; display:none; }
+  .feedback.right { display:block; background:#dff0e6; color:#2f7d5d; }
+  .feedback.wrong { display:block; background:#fdeaea; color:#d95555; }
+  .explain { margin-top:12px; padding:14px 16px; border-radius:12px; background:#f0f4f9; border:1px solid #dde6ef; display:none; }
+  .explain.show { display:block; }
+  .ex-kp { font-size:14px; font-weight:800; color:#2f6fb8; margin-bottom:8px; line-height:1.6; }
+  .ex-text { font-size:15px; color:#3d4a43; line-height:1.8; }
+
+  /* 成绩单 */
+  .result-wrap { text-align:center; padding-top:10px; }
+  .result-score { font-size:52px; font-weight:900; color:#2f7d5d; line-height:1.1; }
+  .result-label { font-size:16px; color:#7b8a80; margin-bottom:6px; }
+  .result-flowers { font-size:22px; font-weight:800; color:#b8860b; margin:16px 0 4px; }
+  .result-flowers .icon { font-size:26px; }
+  .result-tip { font-size:15px; color:#8a978e; margin-bottom:22px; }
+  .result-actions { display:flex; flex-direction:column; gap:10px; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 主页 -->
+  <div id="view-home">
+    <div class="topbar">
+      <div>
+        <div class="logo">惠州五年级每日练</div>
+        <div class="sub">每天三科，每科 10 题</div>
+      </div>
+      <div class="flower-badge"><span class="icon">🌸</span><span id="flowerCount">0</span></div>
+    </div>
+    <div id="bankStatus" style="font-size:12px;color:#8a978e;margin:2px 2px 12px;">题库：加载中…</div>
+
+    <div class="card">
+      <div class="today-line" id="todayLine">今天已练 0/3 科</div>
+      <div class="today-progress" id="todayProgress">
+        <div class="tseg" data-s="yw"></div>
+        <div class="tseg" data-s="sx"></div>
+        <div class="tseg" data-s="en"></div>
+      </div>
+    </div>
+
+    <div class="card subjects" id="subjectCards"></div>
+
+    <div class="cheer hidden" id="cheer">🏆 坚持之星！继续加油！</div>
+
+    <div class="card">
+      <div class="cal-title" id="calTitle"></div>
+      <div class="cal-week">
+        <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </div>
+
+  <!-- 章节页 -->
+  <div id="view-chapters" class="hidden">
+    <div class="page-title">
+      <button class="back-btn" onclick="goHome()">← 返回</button>
+      <h1 id="chSubjectTitle"></h1>
+    </div>
+    <div id="chaptersBody"></div>
+  </div>
+
+  <!-- 做题页 -->
+  <div id="view-quiz" class="hidden">
+    <div class="page-title">
+      <button class="back-btn" onclick="confirmQuit()">← 退出</button>
+      <h1 id="quizSubjectTitle"></h1>
+    </div>
+    <div class="quiz-head"><span class="quiz-progress" id="quizProgress"></span></div>
+    <div class="progress-track"><div class="progress-fill" id="quizFill"></div></div>
+    <div class="quiz-card">
+      <div class="quiz-chapter" id="quizChapter"></div>
+      <div class="quiz-q" id="quizQ"></div>
+      <div id="quizBody"></div>
+      <div class="feedback" id="quizFeedback"></div>
+      <div class="explain" id="quizExplain">
+        <div class="ex-kp" id="exKp"></div>
+        <div class="ex-text" id="exText"></div>
+      </div>
+      <button class="btn gray hidden" id="quizNext" onclick="nextQuestion()">下一题 →</button>
+      <button class="btn hidden" id="quizFinish" onclick="finishQuiz()">看成绩 →</button>
+    </div>
+  </div>
+
+  <!-- 成绩单 -->
+  <div id="view-result" class="hidden">
+    <div class="card result-wrap">
+      <div class="result-label">这科做对了</div>
+      <div class="result-score" id="resultScore">0/10</div>
+      <div class="result-flowers" id="resultFlowers"></div>
+      <div class="result-tip" id="resultTip"></div>
+      <div class="result-actions">
+        <button class="btn" onclick="goHome()">返回主页</button>
+        <button class="btn secondary" onclick="backToChapters()">继续练这一科</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============ 题库 ============ */
+var EXTERNAL_BANK_URL = "https://cdn.jsdelivr.net/gh/wafym1314/__REPO__@main/questions.json";
+window.QA = { yw:[], sx:[], en:[] };
+/*__BANK__*/
+/* ============ 题库结束 ============ */
+
+/* ============ 章节元数据（由题库推导） ============ */
+var CHAPTERS = { yw:[], sx:[], en:[] };
+function rebuildChapters(){
+  CHAPTERS = { yw:[], sx:[], en:[] };
+  Object.keys(QA).forEach(function(sub){
+    var seen = {};
+    QA[sub].forEach(function(q){
+      if(!seen[q.c]){ seen[q.c] = 1; CHAPTERS[sub].push({ c:q.c, ch:q.ch }); }
+    });
+  });
+}
+rebuildChapters();
+
+/* ============ 状态 ============ */
+var STORE_KEY = "hz5_daily_v1";
+var state = load();
+function defaultState(){ return { done:{yw:[],sx:[],en:[]}, flowers:0, checkins:{}, review:{yw:false,sx:false,en:false} }; }
+function load(){
+  try{
+    var raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      var s = JSON.parse(raw);
+      if(s && s.done){
+        if(!s.review) s.review = {yw:false,sx:false,en:false};
+        return s;
+      }
+    }
+  }catch(e){}
+  return defaultState();
+}
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+
+function todayKey(){ var d = new Date(); return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+function todayDoneSubjects(){ return state.checkins[todayKey()] || []; }
+function isSubjectDoneToday(sub){ return todayDoneSubjects().indexOf(sub) >= 0; }
+function markSubjectDone(sub){
+  var arr = state.checkins[todayKey()] || [];
+  if(arr.indexOf(sub) < 0) arr.push(sub);
+  state.checkins[todayKey()] = arr;
+  save();
+}
+
+/* ============ 视图切换 ============ */
+var VIEWS = ["view-home","view-chapters","view-quiz","view-result"];
+function showView(id){
+  VIEWS.forEach(function(v){ document.getElementById(v).classList.add("hidden"); });
+  document.getElementById(id).classList.remove("hidden");
+  window.scrollTo(0,0);
+}
+
+/* ============ 主页 ============ */
+function renderHome(){
+  var done = todayDoneSubjects();
+  document.getElementById("todayLine").textContent = "今天已练 "+done.length+"/3 科";
+  var segs = document.querySelectorAll("#todayProgress .tseg");
+  segs.forEach(function(s){ s.classList.toggle("done", done.indexOf(s.getAttribute("data-s"))>=0); });
+  document.getElementById("flowerCount").textContent = state.flowers;
+  document.getElementById("cheer").classList.toggle("hidden", state.flowers < 10);
+
+  var subs = [
+    { k:"yw", name:"语文", icon:"语", cls:"yw", desc:"统编版 · 五上/五下" },
+    { k:"sx", name:"数学", icon:"数", cls:"sx", desc:"人教版 · 五上/五下" },
+    { k:"en", name:"英语", icon:"英", cls:"en", desc:"人教PEP · 五上/五下" }
+  ];
+  var html = "";
+  subs.forEach(function(s){
+    var d = isSubjectDoneToday(s.k);
+    var allDone = CHAPTERS[s.k].every(function(ch){
+      var all = QA[s.k].filter(function(q){ return q.c===ch.c; });
+      return all.every(function(q){ return state.done[s.k].indexOf(q.i)>=0; });
+    });
+    var stateTxt, stateCls;
+    if(allDone){ stateTxt = "🎉 已通关"; stateCls = "done"; }
+    else if(d){ stateTxt = "✅ 已完成"; stateCls = "done"; }
+    else { stateTxt = "未完成"; stateCls = ""; }
+    html += '<div class="subj-card '+s.cls+'" onclick="openSubject(\''+s.k+'\')">'
+      + '<div class="subj-left"><div class="subj-icon">'+s.icon+'</div>'
+      + '<div><div class="subj-name">'+s.name+'</div><div class="subj-desc">'+s.desc+'</div></div></div>'
+      + '<div class="subj-state'+(stateCls?" "+stateCls:"")+'">'+stateTxt+'</div></div>';
+  });
+  document.getElementById("subjectCards").innerHTML = html;
+  renderCalendar();
+}
+function renderCalendar(){
+  var now = new Date();
+  var y = now.getFullYear(), m = now.getMonth();
+  document.getElementById("calTitle").textContent = y+" 年 "+(m+1)+" 月 打卡";
+  var first = new Date(y,m,1).getDay();
+  var days = new Date(y,m+1,0).getDate();
+  var html = "";
+  for(var i=0;i<first;i++) html += '<div class="cal-cell empty"></div>';
+  for(var d=1; d<=days; d++){
+    var key = y+"-"+("0"+(m+1)).slice(-2)+"-"+("0"+d).slice(-2);
+    var checked = state.checkins[key] && state.checkins[key].length > 0;
+    var isToday = (d === now.getDate());
+    var cls = "cal-cell";
+    if(isToday) cls += " today";
+    if(checked) cls += " checked";
+    html += '<div class="'+cls+'">'+d+'</div>';
+  }
+  document.getElementById("calGrid").innerHTML = html;
+}
+
+/* ============ 章节页 ============ */
+var currentSubject = null;
+var SUBJECT_NAMES = { yw:"语文", sx:"数学", en:"英语" };
+
+function openSubject(sub){
+  currentSubject = sub;
+  document.getElementById("chSubjectTitle").textContent = SUBJECT_NAMES[sub]+" · 选章节";
+  var list = CHAPTERS[sub];
+  var allDone = list.every(function(ch){
+    var all = QA[sub].filter(function(q){ return q.c===ch.c; });
+    return all.every(function(q){ return state.done[sub].indexOf(q.i)>=0; });
+  });
+  if(allDone && !state.review[sub]){
+    if(confirm("这科的章节全都练完啦！要开始第二轮复习吗？复习时题目会重新出现。")){
+      state.review[sub] = true;
+      save();
+    }
+  }
+  var reviewTip = state.review[sub] ? '<div class="part-label" style="color:#b8860b;">🔁 复习模式：所有章节题目重新出现</div>' : "";
+  var total = list.length;
+  var html = reviewTip;
+  var part = null;
+  list.forEach(function(ch, idx){
+    var isSecondHalf = (sub==="yw" && idx>=26) || (sub==="sx" && idx>=7) || (sub==="en" && idx>=6);
+    var pLabel = isSecondHalf ? "下册" : "上册";
+    if(pLabel !== part){ part = pLabel; html += '<div class="part-label">'+pLabel+'</div>'; }
+    var all = QA[sub].filter(function(q){ return q.c===ch.c; });
+    var doneCount = all.filter(function(q){ return state.done[sub].indexOf(q.i)>=0; }).length;
+    var badge, cls;
+    if(doneCount >= all.length){ cls="badge-ok"; badge="✅ 已完成"; }
+    else if(doneCount > 0){ cls="badge-ing"; badge="进行中 "+doneCount+"/"+all.length; }
+    else { cls="badge-new"; badge="未练习"; }
+    html += '<div class="chapter-item" onclick="startChapter(\''+sub+'\',\''+ch.c+'\')">'
+      + '<div class="chapter-name">'+ch.ch+'</div>'
+      + '<div class="chapter-badge '+cls+'">'+badge+'</div></div>';
+  });
+  document.getElementById("chaptersBody").innerHTML = html;
+  showView("view-chapters");
+}
+
+/* ============ 做题页 ============ */
+var currentChapter = null;
+var quizQuestions = [];
+var quizIndex = 0;
+var quizCorrect = 0;
+
+function startChapter(sub, c){
+  currentSubject = sub;
+  var pool;
+  if(state.review[sub]){
+    // 复习模式：题目重新出现
+    pool = QA[sub].filter(function(q){ return q.c===c; });
+  } else {
+    pool = QA[sub].filter(function(q){ return q.c===c && state.done[sub].indexOf(q.i)<0; });
+  }
+  shuffle(pool);
+  quizQuestions = pool.slice(0,10);
+  if(quizQuestions.length === 0){
+    alert("这个章节的题都练完啦，换个章节吧！");
+    return;
+  }
+  currentChapter = c;
+  quizIndex = 0;
+  quizCorrect = 0;
+  document.getElementById("quizSubjectTitle").textContent = SUBJECT_NAMES[sub]+" · 练习";
+  showView("view-quiz");
+  renderQuestion();
+}
+function shuffle(arr){
+  for(var i=arr.length-1;i>0;i--){
+    var j = Math.floor(Math.random()*(i+1));
+    var t = arr[i]; arr[i]=arr[j]; arr[j]=t;
+  }
+}
+function renderQuestion(){
+  var q = quizQuestions[quizIndex];
+  document.getElementById("quizProgress").textContent = "第 "+(quizIndex+1)+" / "+quizQuestions.length+" 题";
+  document.getElementById("quizFill").style.width = (quizIndex/quizQuestions.length*100)+"%";
+  document.getElementById("quizChapter").textContent = q.ch;
+  document.getElementById("quizQ").textContent = q.q;
+  document.getElementById("quizFeedback").className = "feedback";
+  document.getElementById("quizExplain").className = "explain";
+  document.getElementById("quizNext").classList.add("hidden");
+  document.getElementById("quizFinish").classList.add("hidden");
+
+  var body = document.getElementById("quizBody");
+  body.innerHTML = "";
+  if(q.f === 1){
+    body.innerHTML = '<div class="fill-box"><input class="fill-input" id="fillInput" placeholder="在这里填写答案" autocomplete="off"></div>'
+      + '<button class="btn" id="fillSubmit" onclick="submitFill()">提交答案</button>';
+    var inp = document.getElementById("fillInput");
+    setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 60);
+  } else {
+    var letters = ["A","B","C","D"];
+    q.o.forEach(function(opt, idx){
+      var el = document.createElement("button");
+      el.className = "option";
+      el.textContent = letters[idx]+". "+opt;
+      el.onclick = function(){ answer(idx); };
+      body.appendChild(el);
+    });
+  }
+}
+function answer(idx){
+  var q = quizQuestions[quizIndex];
+  var opts = document.querySelectorAll("#quizBody .option");
+  opts.forEach(function(el, i){ el.classList.add("disabled"); if(i===q.a) el.classList.add("correct"); });
+  if(idx === q.a){
+    quizCorrect++;
+    showFeedback("✅ 答对了！", true);
+  } else {
+    opts[idx].classList.add("wrong");
+    showFeedback("❌ 答错了，正确答案是 "+(q.f===1?q.a:(["A","B","C","D"][q.a]+". "+q.o[q.a])), false);
+  }
+  afterAnswer();
+}
+function submitFill(){
+  var q = quizQuestions[quizIndex];
+  var val = document.getElementById("fillInput").value.trim();
+  if(val === ""){ alert("先填上答案再提交哦"); return; }
+  var ok = (val === q.a);
+  if(ok) quizCorrect++;
+  showFeedback(ok ? "✅ 答对了！" : "❌ 正确答案是："+q.a, ok);
+  document.getElementById("fillSubmit").classList.add("hidden");
+  document.getElementById("fillInput").disabled = true;
+  afterAnswer();
+}
+function showFeedback(msg, right){
+  var fb = document.getElementById("quizFeedback");
+  fb.textContent = msg;
+  fb.className = right ? "feedback right" : "feedback wrong";
+  showExplain(quizQuestions[quizIndex]);
+}
+function showExplain(q){
+  var kp = q.k || "本章节知识点";
+  var ex = q.e || "（该题暂无解析）";
+  document.getElementById("exKp").textContent = "📌 知识点：" + kp;
+  document.getElementById("exText").textContent = "💡 解析：" + ex;
+  document.getElementById("quizExplain").className = "explain show";
+}
+function afterAnswer(){
+  if(quizIndex < quizQuestions.length-1){
+    document.getElementById("quizNext").classList.remove("hidden");
+  } else {
+    document.getElementById("quizFinish").classList.remove("hidden");
+  }
+}
+function nextQuestion(){
+  quizIndex++;
+  renderQuestion();
+}
+function finishQuiz(){
+  var sub = currentSubject;
+  quizQuestions.forEach(function(q){ state.done[sub].push(q.i); });
+  var total = quizQuestions.length;
+  var flowers = total>=10 ? (quizCorrect===total?3:(quizCorrect>=8?2:1)) : (quizCorrect===total?2:1);
+  state.flowers += flowers;
+  markSubjectDone(sub);
+  save();
+
+  document.getElementById("resultScore").textContent = quizCorrect+"/"+total;
+  document.getElementById("resultFlowers").innerHTML = '<span class="icon">🌸</span> 获得 '+flowers+' 朵小红花（共 '+state.flowers+' 朵）';
+  var tip = quizCorrect===total ? "太棒了，全对！" : (quizCorrect>=8 ? "真不错，继续保持！" : "完成就很棒，明天再来！");
+  document.getElementById("resultTip").textContent = tip;
+  showView("view-result");
+}
+function confirmQuit(){
+  if(confirm("退出后这次没做完的题不会记入成绩，确定退出吗？")){ goHome(); }
+}
+function backToChapters(){
+  renderHome();
+  openSubject(currentSubject);
+}
+function goHome(){
+  renderHome();
+  showView("view-home");
+}
+
+/* ============ 外置题库：启动时自动拉取最新版，失败则用内置兜底 ============ */
+function loadExternalBank(){
+  if(!window.fetch || !EXTERNAL_BANK_URL){ return; }
+  fetch(EXTERNAL_BANK_URL)
+    .then(function(r){ if(!r.ok){ throw new Error('http ' + r.status); } return r.json(); })
+    .then(function(data){
+      if(data && data.yw && data.yw.length > 0 && data.sx && data.sx.length > 0 && data.en && data.en.length > 0){
+        window.QA = data;
+        rebuildChapters();
+        var s = document.getElementById("bankStatus");
+        if(s){ s.textContent = "题库：在线最新版（共 " + (data.yw.length + data.sx.length + data.en.length) + " 题）"; }
+        if(currentSubject){ openSubject(currentSubject); }
+        else { renderHome(); }
+      }
+    })
+    .catch(function(){
+      var s = document.getElementById("bankStatus");
+      if(s){ s.textContent = "题库：备用版（在线题库暂时连不上，题目未更新）"; }
+    });
+}
+
+/* ============ 启动 ============ */
+renderHome();
+loadExternalBank();
+</script>
+</body>
+</html>
