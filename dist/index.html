@@ -170,6 +170,7 @@
       </div>
       <div class="flower-badge"><span class="icon">🌸</span><span id="flowerCount">0</span></div>
     </div>
+    <div id="bankStatus" style="font-size:12px;color:#8a978e;margin:2px 2px 12px;">题库：加载中…</div>
 
     <div class="card">
       <div class="today-line" id="todayLine">今天已练 0/3 科</div>
@@ -241,7 +242,8 @@
 </div>
 
 <script>
-/* ============ 题库（合并时注入） ============ */
+/* ============ 题库 ============ */
+var EXTERNAL_BANK_URL = "https://cdn.jsdelivr.net/gh/wafym1314/hz5-quiz@main/questions.json";
 window.QA = { yw:[], sx:[], en:[] };
 /* 语文题库 批1：五上 第1课-第10课（选项顺序已打乱，答案位置随机） */
 QA.yw.push(
@@ -1578,14 +1580,16 @@ QA.en.push(
 
 /* ============ 章节元数据（由题库推导） ============ */
 var CHAPTERS = { yw:[], sx:[], en:[] };
-(function buildChapters(){
+function rebuildChapters(){
+  CHAPTERS = { yw:[], sx:[], en:[] };
   Object.keys(QA).forEach(function(sub){
     var seen = {};
     QA[sub].forEach(function(q){
       if(!seen[q.c]){ seen[q.c] = 1; CHAPTERS[sub].push({ c:q.c, ch:q.ch }); }
     });
   });
-})();
+}
+rebuildChapters();
 
 /* ============ 状态 ============ */
 var STORE_KEY = "hz5_daily_v1";
@@ -1855,8 +1859,30 @@ function goHome(){
   showView("view-home");
 }
 
+/* ============ 外置题库：启动时自动拉取最新版，失败则用内置兜底 ============ */
+function loadExternalBank(){
+  if(!window.fetch || !EXTERNAL_BANK_URL){ return; }
+  fetch(EXTERNAL_BANK_URL)
+    .then(function(r){ if(!r.ok){ throw new Error('http ' + r.status); } return r.json(); })
+    .then(function(data){
+      if(data && data.yw && data.yw.length > 0 && data.sx && data.sx.length > 0 && data.en && data.en.length > 0){
+        window.QA = data;
+        rebuildChapters();
+        var s = document.getElementById("bankStatus");
+        if(s){ s.textContent = "题库：在线最新版（共 " + (data.yw.length + data.sx.length + data.en.length) + " 题）"; }
+        if(currentSubject){ openSubject(currentSubject); }
+        else { renderHome(); }
+      }
+    })
+    .catch(function(){
+      var s = document.getElementById("bankStatus");
+      if(s){ s.textContent = "题库：备用版（在线题库暂时连不上，题目未更新）"; }
+    });
+}
+
 /* ============ 启动 ============ */
 renderHome();
+loadExternalBank();
 </script>
 </body>
 </html>
