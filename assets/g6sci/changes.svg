@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180">
+<rect width="320" height="180" fill="#fff"/>
+<rect x="15" y="20" width="140" height="140" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+<text x="30" y="42" font-size="13" fill="#1976d2">物理变化</text>
+<text x="30" y="70" font-size="12" fill="#333">没有新物质生成</text>
+<text x="30" y="95" font-size="12" fill="#333">例：冰融化、玻璃碎</text>
+<text x="30" y="120" font-size="12" fill="#333">水蒸发、折纸</text>
+<rect x="165" y="20" width="140" height="140" fill="#fbe9e7" stroke="#c62828" stroke-width="2"/>
+<text x="180" y="42" font-size="13" fill="#c62828">化学变化</text>
+<text x="180" y="70" font-size="12" fill="#333">生成新物质</text>
+<text x="180" y="95" font-size="12" fill="#333">例：铁生锈、燃烧</text>
+<text x="180" y="120" font-size="12" fill="#333">常伴发光/产气/变色</text>
+<text x="10" y="175" font-size="11" fill="#333">本质区别：是否产生新物质</text>
+</svg>

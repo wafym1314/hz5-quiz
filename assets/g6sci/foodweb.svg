@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180">
+<rect width="320" height="180" fill="#fff"/>
+<text x="24" y="80" font-size="18" fill="#2e7d32">草</text>
+<line x1="55" y1="75" x2="110" y2="55" stroke="#333" stroke-width="2"/>
+<line x1="55" y1="80" x2="110" y2="100" stroke="#333" stroke-width="2"/>
+<text x="118" y="60" font-size="16" fill="#558b2f">兔</text>
+<text x="118" y="105" font-size="16" fill="#7e57c2">虫</text>
+<line x1="160" y1="55" x2="215" y2="75" stroke="#333" stroke-width="2"/>
+<line x1="160" y1="100" x2="215" y2="80" stroke="#333" stroke-width="2"/>
+<text x="223" y="60" font-size="16" fill="#6d4c41">狐</text>
+<text x="223" y="105" font-size="16" fill="#ef6c00">鸟</text>
+<text x="10" y="150" font-size="11" fill="#333">食物网：多条食物链交织；箭头指向捕食者</text>
+<text x="10" y="168" font-size="11" fill="#333">一种生物减少会影响其他，破坏生态平衡</text>
+</svg>

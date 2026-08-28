@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180">
+<rect width="320" height="180" fill="#fff"/>
+<path d="M90 40 h140 v110 a10 10 0 0 1 -10 10 h-120 a10 10 0 0 1 -10 -10 z" fill="#e1f5fe" stroke="#0288d1" stroke-width="2"/>
+<rect x="80" y="28" width="20" height="14" fill="#90a4ae"/>
+<rect x="220" y="28" width="20" height="14" fill="#90a4ae"/>
+<line x1="90" y1="40" x2="90" y2="150" stroke="#0288d1" stroke-width="1" opacity="0.4"/>
+<line x1="130" y1="40" x2="130" y2="150" stroke="#0288d1" stroke-width="1" opacity="0.4"/>
+<line x1="170" y1="40" x2="170" y2="150" stroke="#0288d1" stroke-width="1" opacity="0.4"/>
+<line x1="210" y1="40" x2="210" y2="150" stroke="#0288d1" stroke-width="1" opacity="0.4"/>
+<circle cx="110" cy="70" r="5" fill="#fff" stroke="#0288d1"/>
+<circle cx="150" cy="90" r="5" fill="#fff" stroke="#0288d1"/>
+<circle cx="190" cy="75" r="5" fill="#fff" stroke="#0288d1"/>
+<circle cx="130" cy="120" r="5" fill="#fff" stroke="#0288d1"/>
+<circle cx="180" cy="115" r="5" fill="#fff" stroke="#0288d1"/>
+<text x="20" y="170" font-size="12" fill="#333">盐粒分散到水中——“溶解”，水变咸了</text>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150">
+<rect width="320" height="150" fill="#fff"/>
+<circle cx="35" cy="70" r="12" fill="#f0f0f0" stroke="#999"/>
+<text x="22" y="105" font-size="12" fill="#333">卵</text>
+<line x1="50" y1="70" x2="90" y2="70" stroke="#333" stroke-width="2"/>
+<ellipse cx="120" cy="70" rx="28" ry="12" fill="#fff" stroke="#795548"/>
+<text x="108" y="105" font-size="12" fill="#333">幼虫</text>
+<line x1="150" y1="70" x2="190" y2="70" stroke="#333" stroke-width="2"/>
+<ellipse cx="220" cy="70" rx="20" ry="16" fill="#d7ccc8" stroke="#795548"/>
+<text x="208" y="105" font-size="12" fill="#333">蛹</text>
+<line x1="242" y1="70" x2="282" y2="70" stroke="#333" stroke-width="2"/>
+<path d="M295 70 q0 -18 15 0 q-15 8 -15 18 q0 -10 -15 -18 q15 0 15 -18 z" fill="#e0e0e0" stroke="#9e9e9e"/>
+<text x="278" y="105" font-size="12" fill="#333">蛾</text>
+<text x="10" y="140" font-size="12" fill="#333">蚕的一生：卵 → 幼虫 → 蛹 → 蛾</text>
+</svg>

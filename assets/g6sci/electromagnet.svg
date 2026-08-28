@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180">
+<rect width="320" height="180" fill="#fff"/>
+<rect x="20" y="70" width="30" height="40" fill="#444"/>
+<text x="18" y="125" font-size="11" fill="#333">电池</text>
+<path d="M50 90 q40 -20 70 0 q40 20 70 0" fill="none" stroke="#c62828" stroke-width="3"/>
+<rect x="120" y="70" width="80" height="18" fill="#90a4ae"/>
+<text x="135" y="84" font-size="11" fill="#333">铁芯线圈</text>
+<circle cx="250" cy="90" r="18" fill="#ffd54f" stroke="#f9a825" stroke-width="2"/>
+<text x="238" y="130" font-size="11" fill="#333">小铁钉被吸</text>
+<text x="10" y="160" font-size="11" fill="#333">通电线圈产生磁性（电磁铁）；断电磁性消失</text>
+<text x="10" y="175" font-size="11" fill="#333">电流越大、匝数越多，磁性越强</text>
+</svg>

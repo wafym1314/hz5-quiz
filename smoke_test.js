@@ -142,10 +142,10 @@ assert(quizCorrect === 1, '填空正确答案应计分');
 assert(els['quizExplain'].classList.contains('show'), '填空题也应显示解析');
 console.log('✓ 填空题答对显示解析');
 
-// T13 切换到空年级不崩溃
+// T13 切换到有内容的年级正常显示章节
 currentGrade = '1';
 openSubject('yw');
-assert(els['chaptersBody'].innerHTML.indexOf('整理中') >= 0, '空年级应提示整理中');
+assert(els['chaptersBody'].innerHTML.indexOf('一上') >= 0, '一年级语文应显示章节');
 selectGrade('5');
 console.log('✓ 切换到暂无题目的年级正常（显示“暂无题目”）');
 

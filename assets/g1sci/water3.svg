@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150">
+<rect width="320" height="150" fill="#fff"/>
+<rect x="20" y="40" width="70" height="70" rx="6" fill="#90caf9" stroke="#1e88e5" stroke-width="2"/>
+<text x="42" y="82" font-size="26" fill="#1565c0">冰</text>
+<text x="30" y="130" font-size="12" fill="#333">固态（冷）</text>
+<rect x="125" y="55" width="70" height="50" rx="4" fill="#4fc3f7" stroke="#0288d1" stroke-width="2"/>
+<line x1="125" y1="55" x2="195" y2="55" stroke="#0288d1" stroke-width="2"/>
+<text x="148" y="85" font-size="22" fill="#01579b">水</text>
+<text x="132" y="130" font-size="12" fill="#333">液态</text>
+<g stroke="#b0bec5" stroke-width="2">
+<line x1="250" y1="40" x2="240" y2="95"/>
+<line x1="265" y1="40" x2="262" y2="95"/>
+<line x1="280" y1="40" x2="282" y2="95"/>
+</g>
+<text x="243" y="82" font-size="20" fill="#546e7a">汽</text>
+<text x="238" y="130" font-size="12" fill="#333">气态（热）</text>
+<text x="10" y="145" font-size="12" fill="#333">水有三种状态：冰、水、水蒸气</text>
+</svg>

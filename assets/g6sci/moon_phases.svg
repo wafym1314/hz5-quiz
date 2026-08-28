@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 160">
+<rect width="320" height="160" fill="#fff"/>
+<text x="10" y="18" font-size="12" fill="#333">月相变化（约29.5天一轮）</text>
+<g>
+<circle cx="35" cy="70" r="16" fill="#fff" stroke="#999"/>
+<text x="22" y="100" font-size="10" fill="#333">新月</text>
+<path d="M95 54 a16 16 0 1 0 0 32 a8 16 0 1 1 0 -32" fill="#f4f4f4" stroke="#999"/><circle cx="95" cy="70" r="16" fill="none" stroke="#999"/>
+<text x="82" y="100" font-size="10" fill="#333">上弦</text>
+<circle cx="155" cy="70" r="16" fill="#f4f4f4" stroke="#999"/>
+<text x="145" y="100" font-size="10" fill="#333">满月</text>
+<path d="M215 54 a16 16 0 1 0 0 32 a8 16 0 1 0 0 -32" fill="#fff" stroke="#999"/><circle cx="215" cy="70" r="16" fill="none" stroke="#999"/>
+<text x="202" y="100" font-size="10" fill="#333">下弦</text>
+<circle cx="275" cy="70" r="16" fill="#fff" stroke="#999"/>
+<text x="262" y="100" font-size="10" fill="#333">新月</text>
+</g>
+<text x="10" y="125" font-size="11" fill="#333">月球不发光，反射太阳光；圆缺是地球看被照亮部分的变化</text>
+<text x="10" y="145" font-size="11" fill="#333">顺序：新月→上弦→满月→下弦→新月</text>
+</svg>

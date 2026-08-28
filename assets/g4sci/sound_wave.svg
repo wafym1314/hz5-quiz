@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 160">
+<rect width="320" height="160" fill="#fff"/>
+<rect x="20" y="60" width="34" height="40" fill="#444"/>
+<polygon points="54,60 70,52 70,108 54,100" fill="#444"/>
+<text x="18" y="120" font-size="12" fill="#333">物体振动</text>
+<path d="M95 80 q10 -22 20 0 q10 22 20 0 q10 -22 20 0 q10 22 20 0" fill="none" stroke="#2f7d5d" stroke-width="2"/>
+<path d="M95 80 q10 22 20 0 q10 -22 20 0 q10 22 20 0 q10 -22 20 0" fill="none" stroke="#2f7d5d" stroke-width="2"/>
+<text x="95" y="135" font-size="12" fill="#2f7d5d">声波（通过空气传播）</text>
+<circle cx="250" cy="80" r="16" fill="#ffd54f" stroke="#f9a825" stroke-width="2"/>
+<text x="232" y="120" font-size="12" fill="#333">耳朵</text>
+<text x="10" y="152" font-size="12" fill="#333">声音由物体振动产生，以波的形式通过介质传播</text>
+</svg>

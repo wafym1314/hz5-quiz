@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150">
+<rect width="320" height="150" fill="#fff"/>
+<circle cx="32" cy="75" r="10" fill="#f0f0f0" stroke="#999"/>
+<text x="22" y="105" font-size="12" fill="#333">卵</text>
+<line x1="45" y1="75" x2="85" y2="75" stroke="#333" stroke-width="2"/>
+<ellipse cx="110" cy="78" rx="24" ry="9" fill="#aed581" stroke="#558b2f"/>
+<line x1="92" y1="84" x2="84" y2="96" stroke="#558b2f" stroke-width="2"/>
+<line x1="128" y1="84" x2="136" y2="96" stroke="#558b2f" stroke-width="2"/>
+<text x="96" y="110" font-size="12" fill="#333">蝌蚪</text>
+<line x1="135" y1="75" x2="178" y2="75" stroke="#333" stroke-width="2"/>
+<ellipse cx="205" cy="72" rx="20" ry="13" fill="#7cb342" stroke="#33691e"/>
+<circle cx="205" cy="58" r="9" fill="#7cb342"/>
+<text x="190" y="108" font-size="12" fill="#333">幼蛙</text>
+<line x1="226" y1="72" x2="270" y2="72" stroke="#333" stroke-width="2"/>
+<ellipse cx="292" cy="68" rx="22" ry="15" fill="#558b2f" stroke="#33691e"/>
+<circle cx="292" cy="48" r="11" fill="#558b2f"/>
+<text x="278" y="106" font-size="12" fill="#333">成蛙</text>
+<text x="10" y="140" font-size="12" fill="#333">青蛙的一生：卵 → 蝌蚪 → 幼蛙 → 成蛙</text>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+<rect width="320" height="200" fill="#fff"/>
+<ellipse cx="160" cy="100" rx="55" ry="80" fill="#c8e6c9" stroke="#388e3c" stroke-width="3"/>
+<line x1="105" y1="100" x2="215" y2="100" stroke="#f9a825" stroke-width="2" stroke-dasharray="4"/>
+<text x="118" y="60" font-size="13" fill="#5d4037">种皮</text>
+<line x1="118" y1="64" x2="140" y2="80" stroke="#5d4037" stroke-width="1"/>
+<text x="120" y="120" font-size="13" fill="#6d4c41">子叶</text>
+<line x1="160" y1="100" x2="160" y2="150" stroke="#2e7d32" stroke-width="3"/>
+<text x="166" y="155" font-size="13" fill="#2e7d32">胚根</text>
+<line x1="160" y1="100" x2="160" y2="55" stroke="#43a047" stroke-width="3"/>
+<text x="166" y="50" font-size="13" fill="#43a047">胚芽</text>
+<text x="10" y="192" font-size="12" fill="#333">种子结构：种皮、胚根、胚芽、子叶</text>
+</svg>
