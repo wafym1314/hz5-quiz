@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 140">
+<rect width="320" height="140" fill="#fff"/>
+<text x="24" y="80" font-size="20" fill="#2e7d32">草</text>
+<line x1="55" y1="75" x2="110" y2="75" stroke="#333" stroke-width="2"/>
+<text x="125" y="80" font-size="20" fill="#558b2f">兔</text>
+<line x1="160" y1="75" x2="215" y2="75" stroke="#333" stroke-width="2"/>
+<text x="230" y="80" font-size="20" fill="#6d4c41">狐</text>
+<text x="10" y="125" font-size="12" fill="#333">食物链：草 → 兔 → 狐（箭头指向捕食者）</text>
+</svg>

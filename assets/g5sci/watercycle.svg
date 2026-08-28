@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+<rect width="320" height="200" fill="#fff"/>
+<circle cx="60" cy="40" r="18" fill="#ffca28"/>
+<text x="50" y="35" font-size="14" fill="#f57f17">太阳</text>
+<path d="M120 50 q40 -20 80 0 q30 10 40 30" fill="none" stroke="#90a4ae" stroke-width="3"/>
+<text x="150" y="40" font-size="13" fill="#607d8b">云</text>
+<line x1="200" y1="80" x2="180" y2="120" stroke="#42a5f5" stroke-width="3"/>
+<line x1="180" y1="80" x2="160" y2="120" stroke="#42a5f5" stroke-width="3"/>
+<text x="150" y="140" font-size="12" fill="#1976d2">降雨</text>
+<path d="M180 160 q-40 10 -80 -10" stroke="#26a69a" stroke-width="2" fill="none" stroke-dasharray="4"/>
+<text x="60" y="175" font-size="12" fill="#00897b">蒸发</text>
+<text x="10" y="195" font-size="12" fill="#333">水循环：蒸发→凝结成云→降水→流回</text>
+</svg>

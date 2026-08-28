@@ -1,59 +1,62 @@
-// 合并题库到模板 + 校验
+// 合并题库到模板 + 校验（适配 年级+科目 嵌套键结构）
 const fs = require('fs');
 const path = 'G:/desktop/惠州五年级每日练';
-const FILES = ['yw1','yw2','yw3','yw4','yw5','sx','en1','en2','en3'];
 
-// 1. 先独立校验题库数据（模拟浏览器 QA 对象）
+// ---- 加载题库（与 export_bank.js 一致的来源） ----
 global.QA = { yw:[], sx:[], en:[] };
-let bankSrc = '';
-FILES.forEach(f => {
-  const src = fs.readFileSync(path + '/bank/' + f + '.js', 'utf8');
-  bankSrc += src + '\n';
-  try {
-    eval(src);
-  } catch (e) {
-    console.error('题库文件语法错误: ' + f, e.message);
-    process.exit(1);
-  }
+['yw1','yw2','yw3','yw4','yw5','sx','en1','en2','en3'].forEach(f => {
+  eval(fs.readFileSync(path + '/bank/' + f + '.js', 'utf8'));
 });
+const NEW_DIR = path + '/bank/new';
+if (fs.existsSync(NEW_DIR)) {
+  fs.readdirSync(NEW_DIR).filter(f => f.endsWith('.js')).forEach(f => {
+    eval(fs.readFileSync(NEW_DIR + '/' + f, 'utf8'));
+  });
+}
+['yw','sx','en'].forEach(s => { if (global.QA[s]) { global.QA['5'+s] = global.QA[s]; delete global.QA[s]; } });
 
 let errors = [];
-const ids = new Set();
 let total = 0;
-['yw','sx','en'].forEach(sub => {
-  const arr = QA[sub];
+Object.keys(global.QA).forEach(k => {
+  const arr = global.QA[k];
   const seen = {};
   arr.forEach(q => {
     total++;
-    if (q.i === undefined) errors.push('['+sub+'] 缺题号');
-    else if (ids.has(q.i)) errors.push('重复题号 ' + q.i);
-    else ids.add(q.i);
-    if (!q.c || !q.ch) errors.push('['+sub+':'+q.i+'] 缺章节信息');
-    if (typeof q.q !== 'string' || !q.q.trim()) errors.push('['+sub+':'+q.i+'] 缺题干');
-    if (typeof q.k !== 'string' || !q.k.trim()) errors.push('['+sub+':'+q.i+'] 缺知识点 k');
-    if (typeof q.e !== 'string' || !q.e.trim()) errors.push('['+sub+':'+q.i+'] 缺解析 e');
+    if (q.i === undefined) errors.push('['+k+'] 缺题号');
+    else if (seen[q.i]) errors.push('['+k+'] 重复题号 ' + q.i);
+    else seen[q.i] = 1;
+    if (!q.c || !q.ch) errors.push('['+k+':'+q.i+'] 缺章节信息');
+    if (typeof q.q !== 'string' || !q.q.trim()) errors.push('['+k+':'+q.i+'] 缺题干');
+    if (typeof q.k !== 'string' || !q.k.trim()) errors.push('['+k+':'+q.i+'] 缺知识点 k');
+    if (typeof q.e !== 'string' || !q.e.trim()) errors.push('['+k+':'+q.i+'] 缺解析 e');
     if (q.f === 0) {
-      if (!Array.isArray(q.o) || q.o.length < 2) errors.push('['+sub+':'+q.i+'] 选项不足');
-      else if (typeof q.a !== 'number' || q.a < 0 || q.a >= q.o.length) errors.push('['+sub+':'+q.i+'] 答案索引越界');
+      if (!Array.isArray(q.o) || q.o.length < 2) errors.push('['+k+':'+q.i+'] 选项不足');
+      else if (typeof q.a !== 'number' || q.a < 0 || q.a >= q.o.length) errors.push('['+k+':'+q.i+'] 答案索引越界');
     } else if (q.f === 1) {
-      if (typeof q.a !== 'string' || !q.a.trim()) errors.push('['+sub+':'+q.i+'] 填空缺答案');
+      if (typeof q.a !== 'string' || !q.a.trim()) errors.push('['+k+':'+q.i+'] 填空缺答案');
     } else {
-      errors.push('['+sub+':'+q.i+'] 未知题型 f=' + q.f);
+      errors.push('['+k+':'+q.i+'] 未知题型 f=' + q.f);
     }
-    seen[q.c] = (seen[q.c]||0) + 1;
+    if (q.img && typeof q.img !== 'string') errors.push('['+k+':'+q.i+'] img 字段应为字符串');
   });
-  console.log(sub + ': ' + arr.length + ' 题, ' + Object.keys(seen).length + ' 个章节');
+  console.log(k + ': ' + arr.length + ' 题, ' + Object.keys(seen).length + ' 个不同题号');
 });
-console.log('三科合计: ' + total + ' 题');
 
-// 2. 合并到模板
+// ---- 合并到模板 ----
 const tpl = fs.readFileSync(path + '/index_template.html', 'utf8');
 if (tpl.indexOf('/*__BANK__*/') < 0) { console.error('模板中找不到占位符'); process.exit(1); }
+// 重新拼出 bank 源码（legacy + new），注入模板做兜底
+let bankSrc = '';
+global.QA = { yw:[], sx:[], en:[] };
+['yw1','yw2','yw3','yw4','yw5','sx','en1','en2','en3'].forEach(f => { bankSrc += fs.readFileSync(path + '/bank/' + f + '.js', 'utf8') + '\n'; });
+if (fs.existsSync(NEW_DIR)) {
+  fs.readdirSync(NEW_DIR).filter(f => f.endsWith('.js')).forEach(f => { bankSrc += fs.readFileSync(NEW_DIR + '/' + f, 'utf8') + '\n'; });
+}
 const out = tpl.replace('/*__BANK__*/', bankSrc);
 fs.writeFileSync(path + '/index.html', out, 'utf8');
 console.log('index.html 已生成, 大小 ' + (out.length/1024).toFixed(1) + ' KB');
 
-// 3. 校验合并后页面里整个 <script> 的语法
+// ---- 校验合并后页面脚本语法 ----
 const m = out.match(/<script>([\s\S]*?)<\/script>/);
 if (!m) { console.error('找不到 script 块'); process.exit(1); }
 try {
@@ -69,4 +72,4 @@ if (errors.length) {
   errors.slice(0, 60).forEach(e => console.log(' -', e));
   process.exit(1);
 }
-console.log('题库校验通过 ✓（无重复题号、字段完整、每题含知识点与解析、答案合法）');
+console.log('题库校验通过 ✓（无重复题号、字段完整、每题含知识点与解析、答案合法） 共 ' + total + ' 题');

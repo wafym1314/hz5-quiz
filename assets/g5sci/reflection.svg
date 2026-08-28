@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+<rect width="320" height="200" fill="#fff"/>
+<line x1="20" y1="150" x2="300" y2="150" stroke="#888" stroke-width="3"/>
+<text x="270" y="168" font-size="13" fill="#555">镜面</text>
+<line x1="160" y1="150" x2="160" y2="40" stroke="#bbb" stroke-width="1" stroke-dasharray="4"/>
+<text x="120" y="95" font-size="12" fill="#999">法线</text>
+<line x1="60" y1="60" x2="160" y2="150" stroke="#e0533a" stroke-width="3"/>
+<text x="64" y="55" font-size="12" fill="#e0533a">入射光线</text>
+<line x1="160" y1="150" x2="260" y2="60" stroke="#2f7d5d" stroke-width="3"/>
+<text x="208" y="55" font-size="12" fill="#2f7d5d">反射光线</text>
+<text x="10" y="190" font-size="12" fill="#333">光的反射：反射角 = 入射角</text>
+</svg>

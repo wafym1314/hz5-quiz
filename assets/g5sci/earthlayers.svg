@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+<rect width="320" height="200" fill="#fff"/>
+<circle cx="160" cy="100" r="80" fill="#8d6e63"/>
+<circle cx="160" cy="100" r="55" fill="#d84315"/>
+<circle cx="160" cy="100" r="28" fill="#ffca28"/>
+<text x="150" y="104" font-size="12" fill="#fff">地核</text>
+<text x="228" y="80" font-size="12" fill="#5d4037">地壳</text>
+<text x="198" y="135" font-size="12" fill="#fff">地幔</text>
+<text x="10" y="190" font-size="12" fill="#333">地球由地壳、地幔、地核组成</text>
+</svg>

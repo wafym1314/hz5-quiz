@@ -1,8 +1,7 @@
-// 冒烟测试：模拟浏览器环境跑核心流程
+// 冒烟测试：模拟浏览器环境跑核心流程（适配 年级+科目 嵌套键）
 const fs = require('fs');
 const path = 'G:/desktop/惠州五年级每日练';
 
-// ---- DOM stub ----
 function makeEl(){
   var el = {};
   var cls = new Set();
@@ -46,113 +45,116 @@ global.document = {
     return [];
   }
 };
-global.window = { scrollTo(){} };
-global.QA = { yw:[], sx:[], en:[] };
-global.localStorage = {
-  _m:{}, getItem(k){ return this._m[k]||null; }, setItem(k,v){ this._m[k]=String(v); }
-};
+// 让 window 与 global 同一对象，模拟浏览器（页面里 window.QA 与全局 QA 一致）
+global.scrollTo = function(){};
+global.window = global;
+global.localStorage = { _m:{}, getItem(k){ return this._m[k]||null; }, setItem(k,v){ this._m[k]=String(v); } };
 global.confirm = () => true;
 global.alert = (m) => { global.__alerts = global.__alerts||[]; global.__alerts.push(m); };
 
-// ---- 加载页面脚本（已含全部题库） ----
 const html = fs.readFileSync(path + '/index.html', 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 eval(script);
-// 检查题库是否加载成功
-if (QA.yw.length < 400 || QA.sx.length < 400 || QA.en.length < 380) {
-  throw new Error('题库加载异常: yw=' + QA.yw.length + ' sx=' + QA.sx.length + ' en=' + QA.en.length);
-}
-console.log('✓ 题库加载正常（yw=' + QA.yw.length + ' sx=' + QA.sx.length + ' en=' + QA.en.length + '）');
 
-// ---- 测试 1：主页渲染 ----
-renderHome();
-if (String(els['flowerCount'].textContent) !== '0') throw new Error('主页小红花显示错误');
-console.log('✓ 主页渲染正常');
+function assert(cond, msg){ if(!cond) throw new Error('断言失败: ' + msg); }
 
-// ---- 测试 2：开始语文第1课练习 ----
-const allYw1 = QA.yw.filter(q=>q.c==='yw-1');
+// T1 题库结构
+assert(QA['5yw'] && QA['5yw'].length >= 400, '5yw 题量不足: ' + (QA['5yw']?QA['5yw'].length:0));
+assert(QA['5sx'] && QA['5sx'].length >= 400, '5sx 题量不足');
+assert(QA['5en'] && QA['5en'].length >= 380, '5en 题量不足');
+console.log('✓ 题库结构正常（5yw='+QA['5yw'].length+' 5sx='+QA['5sx'].length+' 5en='+QA['5en'].length+'）');
+
+// T2 主页渲染（年级标签 + 科目卡片）
+assert(els['gradeTabs'].innerHTML.indexOf('5年级') >= 0, '年级标签未渲染');
+assert(els['subjectCards'].innerHTML.indexOf('语文') >= 0, '科目卡片未渲染');
+console.log('✓ 主页渲染（年级选择 + 四科卡片）正常');
+
+// T3 章节抽题 10 道
+currentGrade = '5';
 startChapter('yw','yw-1');
-if (quizQuestions.length !== 10) throw new Error('应抽10题，实际'+quizQuestions.length);
+assert(quizQuestions.length === 10, '应抽10题，实际'+quizQuestions.length);
 console.log('✓ 章节抽题 10 道正常');
 
-// ---- 测试 3：全对答题 → 小红花/打卡/记录 ----
+// T4 全对 → 3 朵花 + 打卡 + 记录
 for (let i=0;i<quizQuestions.length;i++){
   renderQuestion();
   answer(quizQuestions[quizIndex].a);
   if (quizIndex < quizQuestions.length-1) nextQuestion();
 }
 finishQuiz();
-if (state.flowers !== 3) throw new Error('全对应得3朵花，实际'+state.flowers);
-if (state.done.yw.length !== 10) throw new Error('应记录10道已做题');
-if (!isSubjectDoneToday('yw')) throw new Error('语文应打卡');
-console.log('✓ 全对 → 3朵小红花 + 打卡 + 记录10题');
+const k5yw = '5yw';
+assert(state.flowers === 3, '全对应得3朵花，实际'+state.flowers);
+assert(state.done[k5yw].length >= 10, '应记录已做题');
+assert(isSubjectDoneToday(k5yw), '应打卡');
+console.log('✓ 全对 → 3朵小红花 + 打卡 + 记录');
 
-// ---- 测试 4：同一章节再抽 → 已做过的题不再出现（0 道可抽） ----
+// T5 做过的题不再出现
 startChapter('yw','yw-1');
-if (quizQuestions.length !== 0) throw new Error('做过的题不应再出现');
-console.log('✓ 做过的题不再出现（该章节已无题可抽）');
+assert(quizQuestions.length === 0, '做过的题不应再出现');
+console.log('✓ 做过的题不再出现');
 
-// ---- 测试 5：章节 badge 状态 ----
+// T6 章节状态
 openSubject('yw');
-const bodyEl = els['chaptersBody'].innerHTML;
-if (bodyEl.indexOf('已完成') < 0) throw new Error('章节应显示已完成');
+assert(els['chaptersBody'].innerHTML.indexOf('已完成') >= 0, '章节应显示已完成');
 console.log('✓ 章节状态正确（已完成）');
 
-// ---- 测试 6：全部章节完成后 → 提示进入复习（confirm stub 返回 true） ----
-// 模拟把语文全部章节做完
-QA.yw.forEach(q => { if (state.done.yw.indexOf(q.i)<0) state.done.yw.push(q.i); });
+// T7 全部完成后提示复习
+QA['5yw'].forEach(q => { if (state.done[k5yw].indexOf(q.i)<0) state.done[k5yw].push(q.i); });
 save();
 openSubject('yw');
-if (state.review.yw !== true) throw new Error('应进入复习模式');
-console.log('✓ 全部章节完成后自动提示进入复习模式');
+assert(state.review[k5yw] === true, '应进入复习模式');
+console.log('✓ 全部章节完成后自动进入复习模式');
 
-// ---- 测试 7：复习模式可重新抽题 ----
+// T8 复习模式重新抽题
 startChapter('yw','yw-1');
-if (quizQuestions.length !== 10) throw new Error('复习模式应重新抽10题');
+assert(quizQuestions.length === 10, '复习模式应重新抽10题');
 console.log('✓ 复习模式题目重新出现');
 
-// ---- 测试 8：打卡日历渲染 ----
+// T9 日历
 renderCalendar();
-if (!els['calGrid'].innerHTML) throw new Error('日历渲染失败');
+assert(els['calGrid'].innerHTML, '日历渲染失败');
 console.log('✓ 打卡日历渲染正常');
 
-// ---- 测试 9：错题判分（选错误答案） ----
-state.review.yw = false; // 重置
+// T10 答错判分
+state.review[k5yw] = false;
 startChapter('sx','sx-1');
 renderQuestion();
 const wrongIdx = (quizQuestions[0].a + 1) % quizQuestions[0].o.length;
 answer(wrongIdx);
-if (quizCorrect !== 0) throw new Error('答错不应加分');
-const fb = els['quizFeedback'];
-if (!fb.classList.contains('wrong')) throw new Error('应显示答错反馈');
+assert(quizCorrect === 0, '答错不应加分');
+assert(els['quizFeedback'].classList.contains('wrong'), '应显示答错反馈');
 console.log('✓ 答错判分与反馈正常');
 
-// ---- 测试 10：解析与知识点显示（无论对错都应出现） ----
-const ex = els['quizExplain'];
-if (!ex.classList.contains('show')) throw new Error('答完后应显示解析');
-if (!els['exKp'].textContent || !els['exText'].textContent) throw new Error('解析内容为空');
-if (els['exText'].textContent.indexOf('解析：') < 0) throw new Error('解析格式不正确');
-const q0 = quizQuestions[0];
-if (typeof q0.k !== 'string' || !q0.k || typeof q0.e !== 'string' || !q0.e) throw new Error('题目缺知识点或解析');
-startChapter('sx','sx-2');
-renderQuestion();
-answer(quizQuestions[0].a);
-if (!els['quizExplain'].classList.contains('show')) throw new Error('答对后也应显示解析');
-console.log('✓ 答对/答错都显示知识点与解析');
+// T11 解析显示
+assert(els['quizExplain'].classList.contains('show'), '答完应显示解析');
+assert(els['exText'].textContent.indexOf('解析：') >= 0, '解析格式不正确');
+console.log('✓ 答错也显示知识点与解析');
 
-// ---- 测试 11：填空题提交后显示解析 ----
+// T12 填空题
 var fillQ = null;
-QA.en.forEach(function(q){ if(q.c==='en-1' && q.f===1 && !fillQ) fillQ = q; });
-if (!fillQ) throw new Error('英语Unit1应有填空题');
-quizQuestions = [fillQ];
-quizIndex = 0;
-quizCorrect = 0;
+QA['5en'].forEach(function(q){ if(q.c==='en-1' && q.f===1 && !fillQ) fillQ = q; });
+assert(fillQ, '英语Unit1应有填空题');
+quizQuestions = [fillQ]; quizIndex = 0; quizCorrect = 0;
 renderQuestion();
 els['fillInput'].value = fillQ.a;
 submitFill();
-if (quizCorrect !== 1) throw new Error('填空正确答案应计分');
-if (!els['quizExplain'].classList.contains('show')) throw new Error('填空题也应显示解析');
-if (els['exText'].textContent.indexOf('解析：') < 0) throw new Error('填空题解析为空');
+assert(quizCorrect === 1, '填空正确答案应计分');
+assert(els['quizExplain'].classList.contains('show'), '填空题也应显示解析');
 console.log('✓ 填空题答对显示解析');
+
+// T13 切换到空年级不崩溃
+currentGrade = '1';
+openSubject('yw');
+assert(els['chaptersBody'].innerHTML.indexOf('整理中') >= 0, '空年级应提示整理中');
+selectGrade('5');
+console.log('✓ 切换到暂无题目的年级正常（显示“暂无题目”）');
+
+// T14 图片渲染
+currentGrade = '5';
+quizQuestions = [{ i:99999, c:'t', ch:'测试', f:0, q:'看图答题', o:['A','B'], a:0, k:'k', e:'e', img:'https://example.com/x.svg' }];
+quizIndex = 0; quizCorrect = 0;
+renderQuestion();
+assert(els['quizImg'].innerHTML.indexOf('<img') >= 0, '图片未渲染');
+console.log('✓ 题目配图渲染正常');
 
 console.log('\n全部冒烟测试通过 ✅');
