@@ -46,7 +46,7 @@ def gen_g1():
        ("1sx-11","一下·第4单元 找规律"),
        ("1sx-12","一下·第5单元 分类与整理")]
     for (c,ch) in U:
-        for _ in range(16):
+        for _ in range(22):
             t=random.choice(["compare","pos","add5","shape","add10","ten","clock","sub20","money","hundred","pattern","sort"])
             if t=="compare":
                 a,b=rnd(1,10),rnd(1,10)
@@ -117,7 +117,7 @@ def gen_g2():
        ("2sx-12","二下·第5单元 有余数的除法"),
        ("2sx-13","二下·第6单元 万以内数的认识")]
     for (c,ch) in U:
-        for _ in range(16):
+        for _ in range(22):
             t=random.choice(["len","add100","angle","mul","view","clock2","data","div","motion","mix","rem","wan"])
             if t=="len":
                 q="测量铅笔长度通常用（　）作单位。"; correct="厘米"; pool=["厘米","米","千克","毫米"]
@@ -147,8 +147,8 @@ def gen_g2():
                 q="推开抽屉的运动是（　）。"; correct="平移"; pool=["平移","旋转","轴对称","滚动"]
                 o,aidx=build_opts(q,correct,[x for x in pool if x!=correct]); add(c,ch,0,q,o,aidx,"图形的运动：平移、旋转、轴对称",e_text(q,correct))
             elif t=="mix":
-                a,b,c=rnd(2,9),rnd(2,9),rnd(2,9); s=a+b*c; q="先算乘法：%d + %d × %d = ?"%(a,b,c); correct=str(s)
-                pool=[str(s+rnd(-4,4)) for _ in range(6)]; o,aidx=build_opts(q,correct,pool); add(c,ch,0,q,o,aidx,"混合运算：先乘除后加减",e_text(q,correct,"先算%d×%d=%d，再%d+%d=%d"%(b,c,b*c,a,b*c,s)))
+                a,b,d=rnd(2,9),rnd(2,9),rnd(2,9); s=a+b*d; q="先算乘法：%d + %d × %d = ?"%(a,b,d); correct=str(s)
+                pool=[str(s+rnd(-4,4)) for _ in range(6)]; o,aidx=build_opts(q,correct,pool); add(c,ch,0,q,o,aidx,"混合运算：先乘除后加减",e_text(q,correct,"先算%d×%d=%d，再%d+%d=%d"%(b,d,b*d,a,b*d,s)))
             elif t=="rem":
                 a=rnd(10,30); b=rnd(2,9); q="计算 %d ÷ %d 的余数？"%(a,b); r=a%b; correct=str(r)
                 pool=[str((a%b+rnd(-1,1))%b) for _ in range(6)]; o,aidx=build_opts(q,correct,pool); add(c,ch,0,q,o,aidx,"有余数的除法：余数要比除数小",e_text(q,correct,"%d÷%d=%d…余%d"%(a,b,a//b,r)))
@@ -175,7 +175,7 @@ def gen_g3():
        ("3sx-12","三下·第5单元 面积"),
        ("3sx-13","三下·第6单元 年、月、日")]
     for (c,ch) in U:
-        for _ in range(16):
+        for _ in range(22):
             t=random.choice(["time","addwan","measure","bei","mul1","peri","frac","direct","div1","stat","mul2","area","ymd"])
             if t=="time":
                 q="分针走1小格是（　）分，走1大格是（　）分。"; correct="1分和5分"; pool=["1分和5分","1分和10分","5分和1分","60分和5分"]
@@ -236,7 +236,7 @@ def gen_g4():
        ("4sx-12","四下·第5单元 小数加减法"),
        ("4sx-13","四下·第6单元 平均数与条形")]
     for (c,ch) in U:
-        for _ in range(16):
+        for _ in range(22):
             t=random.choice(["big","ha","angle4","mul3","para","div2","bar","four","law","dec","tri","decadd","avg"])
             if t=="big":
                 q="读一个数时，每级末尾的0都（　）。"; correct="不读"; pool=["不读","读一个零","都读","读两个零"]
@@ -260,10 +260,10 @@ def gen_g4():
                 q="条形统计图中，1格代表几，由（　）决定。"; correct="数据大小和格子数"; pool=["数据大小和格子数","随便定","总是1","总是10"]
                 o,aidx=build_opts(q,correct,[x for x in pool if x!=correct]); add(c,ch,0,q,o,aidx,"条形统计图：1格代表的数量看纵轴",e_text(q,correct))
             elif t=="four":
-                a,b,c=rnd(2,20),rnd(2,20),rnd(2,20); s=a+b-c; q="%d + %d - %d = ?"%(a,b,c); correct=str(s)
-                pool=[str(s+rnd(-5,5)) for _ in range(6)]; o,aidx=build_opts(q,correct,pool); add(c,ch,0,q,o,aidx,"四则运算：加减同级从左到右",e_text(q,correct,"%d+%d-%d=%d"%(a,b,c,s)))
+                a,b,d=rnd(2,20),rnd(2,20),rnd(2,20); s=a+b-d; q="%d + %d - %d = ?"%(a,b,d); correct=str(s)
+                pool=[str(s+rnd(-5,5)) for _ in range(6)]; o,aidx=build_opts(q,correct,pool); add(c,ch,0,q,o,aidx,"四则运算：加减同级从左到右",e_text(q,correct,"%d+%d-%d=%d"%(a,b,d,s)))
             elif t=="law":
-                a,b,c=rnd(2,20),rnd(2,20),rnd(2,20); s=a+b+c; q="(a+b)+c = a+(b+c) 运用了（　）。"; correct="加法结合律"; pool=["加法结合律","加法交换律","乘法结合律","乘法分配律"]
+                a,b,d=rnd(2,20),rnd(2,20),rnd(2,20); s=a+b+d; q="(a+b)+c = a+(b+c) 运用了（　）。"; correct="加法结合律"; pool=["加法结合律","加法交换律","乘法结合律","乘法分配律"]
                 o,aidx=build_opts(q,correct,[x for x in pool if x!=correct]); add(c,ch,0,q,o,aidx,"运算定律：加法结合律 (a+b)+c=a+(b+c)",e_text(q,correct))
             elif t=="dec":
                 q="0.8 里面有（　）个 0.1。"; correct="8"; pool=["8","80","0.8","800"]
@@ -295,7 +295,7 @@ def gen_g6():
        ("6sx-10","六下·第4单元 比例"),
        ("6sx-11","六下·第5单元 数学广角（鸽巢）")]
     for (c,ch) in U:
-        for _ in range(16):
+        for _ in range(22):
             t=random.choice(["fmul","fdiv","ratio","pct","circle","sec","neg","pct2","cyl","prop","pigeon"])
             if t=="fmul":
                 a=rnd(2,9); b=rnd(2,9); q="计算：%d × 1/%d = ?"%(a,b); correct=fnum(a/b) if b%a!=0 else str(a//b)
@@ -313,8 +313,8 @@ def gen_g6():
                 q="把 0.25 化成百分数是（　）。"; correct="25%"; pool=["25%","2.5%","250%","0.25%"]
                 o,aidx=build_opts(q,correct,[x for x in pool if x!=correct]); add(c,ch,0,q,o,aidx,"百分数：小数×100加%",e_text(q,correct,"0.25=25%"))
             elif t=="circle":
-                r=rnd(2,10); c=round(2*3.14*r,2); q="圆的半径=%d，周长约是？（π取3.14）"%r; correct=fnum(c)
-                pool=[fnum(round(2*3.14*r+rnd(-3,3),2)) for _ in range(6)]; o,aidx=build_opts(q,correct,pool); add(c,ch,0,q,o,aidx,"圆周长 C=2πr",e_text(q,correct,"2×3.14×%d=%s"%(r,c)))
+                r=rnd(2,10); circ=round(2*3.14*r,2); q="圆的半径=%d，周长约是？（π取3.14）"%r; correct=fnum(circ)
+                pool=[fnum(round(2*3.14*r+rnd(-3,3),2)) for _ in range(6)]; o,aidx=build_opts(q,correct,pool); add(c,ch,0,q,o,aidx,"圆周长 C=2πr",e_text(q,correct,"2×3.14×%d=%s"%(r,circ)))
             elif t=="sec":
                 q="要表示各部分占总体的百分比，用（　）统计图最合适。"; correct="扇形"; pool=["扇形","条形","折线","饼"]
                 o,aidx=build_opts(q,correct,[x for x in pool if x!=correct]); add(c,ch,0,q,o,aidx,"扇形统计图：表示部分与整体的关系",e_text(q,correct))

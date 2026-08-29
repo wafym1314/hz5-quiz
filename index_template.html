@@ -446,17 +446,32 @@ var quizQuestions = [];
 var quizIndex = 0;
 var quizCorrect = 0;
 
+var CHAPTER_QUIZ_SIZE = 20;   // 每个章节每次练习的题量
+
 function startChapter(sub, c){
   currentSubject = sub;
   var k = key(currentGrade, sub);
+  var all = QA[k] || [];
   var pool;
   if(state.review[k]){
-    pool = QA[k].filter(function(q){ return q.c===c; });
+    pool = all.filter(function(q){ return q.c===c; });
   } else {
-    pool = QA[k].filter(function(q){ return q.c===c && doneArr(k).indexOf(q.i)<0; });
+    pool = all.filter(function(q){ return q.c===c && doneArr(k).indexOf(q.i)<0; });
+  }
+  // 本章本身题量不足 CHAPTER_QUIZ_SIZE 时，用同科目其它章节补足，保证一次能练够
+  // 注意：只在本章还有没做的题时才补，否则会导致章节永远练不完
+  var total = all.filter(function(q){ return q.c===c; }).length;
+  var supplemented = 0;
+  if(pool.length > 0 && total < CHAPTER_QUIZ_SIZE){
+    var extra = all.filter(function(q){ return q.c!==c && doneArr(k).indexOf(q.i)<0; });
+    shuffle(extra);
+    var need = CHAPTER_QUIZ_SIZE - pool.length;
+    if(extra.length < need) need = extra.length;
+    supplemented = need;
+    pool = pool.concat(extra.slice(0, need));
   }
   shuffle(pool);
-  quizQuestions = pool.slice(0,10);
+  quizQuestions = pool.slice(0, CHAPTER_QUIZ_SIZE);
   if(quizQuestions.length === 0){
     alert("这个章节的题都练完啦，换个章节吧！");
     return;
@@ -464,7 +479,9 @@ function startChapter(sub, c){
   currentChapter = c;
   quizIndex = 0;
   quizCorrect = 0;
-  document.getElementById("quizSubjectTitle").textContent = currentGrade+"年级 " + SUBJECT_NAMES[sub] + " · 练习";
+  var title = currentGrade+"年级 " + SUBJECT_NAMES[sub] + " · 练习";
+  if(supplemented > 0) title += "（本章共 "+total+" 题，已补充 "+supplemented+" 道同科题目）";
+  document.getElementById("quizSubjectTitle").textContent = title;
   showView("view-quiz");
   renderQuestion();
 }
