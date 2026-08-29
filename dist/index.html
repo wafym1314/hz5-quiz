@@ -269,6 +269,8 @@ function key(g,s){ return g + s; }
 var EXTERNAL_BANK_URL = "https://cdn.jsdelivr.net/gh/wafym1314/hz5-quiz@main/questions.json";
 window.QA = { yw:[], sx:[], en:[] };
 var QA = window.QA;
+// 兼容题库文件里的 global.QA 引用：浏览器没有 global，这里给一个 window 的别名
+var global = window;
 /* 语文题库 批1：五上 第1课-第10课（选项顺序已打乱，答案位置随机） */
 QA.yw.push(
 {i:0,c:"yw-1",ch:"五上·第1课 白鹭",f:0,q:"“白鹭”的“鹭”正确读音是？",o:["lù","nù","lǜ","lú"],a:0,k:"字音辨析：白鹭的“鹭”",e:"“鹭”是左右结构“路+鸟”，读 lù，是鸟类（鹭科）的通称，如白鹭、苍鹭。"},

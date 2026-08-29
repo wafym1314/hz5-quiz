@@ -269,6 +269,8 @@ function key(g,s){ return g + s; }
 var EXTERNAL_BANK_URL = "https://cdn.jsdelivr.net/gh/wafym1314/hz5-quiz@main/questions.json";
 window.QA = { yw:[], sx:[], en:[] };
 var QA = window.QA;
+// 兼容题库文件里的 global.QA 引用：浏览器没有 global，这里给一个 window 的别名
+var global = window;
 /*__BANK__*/
 (function migrate(){
   ["yw","sx","en"].forEach(function(s){
