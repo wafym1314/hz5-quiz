@@ -13,7 +13,16 @@ if (fs.existsSync(NEW_DIR)) {
     eval(fs.readFileSync(NEW_DIR + '/' + f, 'utf8'));
   });
 }
-['yw','sx','en'].forEach(s => { if (global.QA[s]) { global.QA['5'+s] = global.QA[s]; delete global.QA[s]; } });
+// 五年级老题库用的是 yw/sx/en 键，要迁到 5yw/5sx/5en。
+// 必须用 concat 合并：bank/new/ 下的拔高题已经写进 QA['5yw']，
+// 用赋值(=)会把它们整个覆盖掉（曾出过这个 bug：212 道拔高题凭空消失）。
+['yw','sx','en'].forEach(s => {
+  if (global.QA[s]) {
+    const k = '5' + s;
+    global.QA[k] = (global.QA[k] || []).concat(global.QA[s]);
+    delete global.QA[s];
+  }
+});
 
 let errors = [];
 let total = 0;

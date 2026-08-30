@@ -169,6 +169,13 @@
   .result-flowers .icon { font-size:26px; }
   .result-tip { font-size:15px; color:#8a978e; margin-bottom:22px; }
   .result-actions { display:flex; flex-direction:column; gap:10px; }
+  /* 拔高题（重点班难度）标记 */
+  .hard-badge{
+    display:inline-block; margin-left:8px; padding:2px 9px;
+    background:linear-gradient(135deg,#ff8a3d,#ff5e62); color:#fff;
+    font-size:14px; font-weight:800; border-radius:999px;
+    vertical-align:middle; letter-spacing:.5px;
+  }
 </style>
 </head>
 <body>
@@ -274,7 +281,14 @@ var global = window;
 /*__BANK__*/
 (function migrate(){
   ["yw","sx","en"].forEach(function(s){
-    if(window.QA[s]){ window.QA["5"+s] = window.QA[s]; delete window.QA[s]; }
+    if(window.QA[s]){
+      var k = "5"+s;
+      // 必须 concat 合并，不能用 = 赋值：
+      // 五年级拔高题是直接写进 QA["5yw"] 的，赋值会把它们整体覆盖掉
+      // （曾出过这个 bug：342 道五年级拔高题在页面上凭空消失）
+      window.QA[k] = (window.QA[k] || []).concat(window.QA[s]);
+      delete window.QA[s];
+    }
   });
   GRADES.forEach(function(g){ SUBJECTS.forEach(function(s){ if(!window.QA[key(g,s)]) window.QA[key(g,s)] = []; }); });
 })();
@@ -447,6 +461,7 @@ var quizIndex = 0;
 var quizCorrect = 0;
 
 var CHAPTER_QUIZ_SIZE = 20;   // 每个章节每次练习的题量
+var HARD_MIN = 8;             // 每次练习至少包含的拔高题（d:2）道数，保证重点班难度
 
 function startChapter(sub, c){
   currentSubject = sub;
@@ -470,8 +485,18 @@ function startChapter(sub, c){
     supplemented = need;
     pool = pool.concat(extra.slice(0, need));
   }
-  shuffle(pool);
-  quizQuestions = pool.slice(0, CHAPTER_QUIZ_SIZE);
+  // 保证拔高题占比：先从池子里取够 HARD_MIN 道 d:2 拔高题，不够的部分用普通题补齐。
+  // 1~3 年级没有拔高题（hard 为空），此时 nHard=0，全部取普通题 —— 属于正常降级。
+  var hard = pool.filter(function(q){ return q.d===2; });
+  var norm = pool.filter(function(q){ return q.d!==2; });
+  shuffle(hard); shuffle(norm);
+  var nHard = Math.min(HARD_MIN, hard.length);
+  // 注意：抽剩的拔高题要并入普通题一起候补，否则拔高题多于 HARD_MIN 时
+  // 多出来的会被白白丢掉，导致总题数凑不满 20（曾出过：只抽出 19 题）
+  var rest = hard.slice(nHard).concat(norm);
+  shuffle(rest);
+  quizQuestions = hard.slice(0, nHard).concat(rest.slice(0, CHAPTER_QUIZ_SIZE - nHard));
+  shuffle(quizQuestions);   // 打乱，避免拔高题全挤在前面
   if(quizQuestions.length === 0){
     alert("这个章节的题都练完啦，换个章节吧！");
     return;
@@ -481,6 +506,7 @@ function startChapter(sub, c){
   quizCorrect = 0;
   var title = currentGrade+"年级 " + SUBJECT_NAMES[sub] + " · 练习";
   if(supplemented > 0) title += "（本章共 "+total+" 题，已补充 "+supplemented+" 道同科题目）";
+  if(nHard > 0) title += " · 含 "+nHard+" 道拔高题";
   document.getElementById("quizSubjectTitle").textContent = title;
   showView("view-quiz");
   renderQuestion();
@@ -495,7 +521,9 @@ function renderQuestion(){
   var q = quizQuestions[quizIndex];
   document.getElementById("quizProgress").textContent = "第 "+(quizIndex+1)+" / "+quizQuestions.length+" 题";
   document.getElementById("quizFill").style.width = (quizIndex/quizQuestions.length*100)+"%";
-  document.getElementById("quizChapter").textContent = q.ch;
+  // 章节标题后跟一个「拔高」标记（d:2 = 重点班难度题）
+  document.getElementById("quizChapter").innerHTML =
+    q.ch + (q.d === 2 ? ' <span class="hard-badge">拔高</span>' : '');
   document.getElementById("quizImg").innerHTML = q.img ? '<img class="quiz-img" src="'+q.img+'" alt="题目配图">' : "";
   document.getElementById("quizQ").textContent = q.q;
   document.getElementById("quizFeedback").className = "feedback";

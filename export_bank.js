@@ -20,9 +20,15 @@ NEW_FILES.forEach(f => {
   eval(src);
 });
 
-// 3) 迁移旧五年级 flat 键到 5yw/5sx/5en
+// 3) 迁移旧五年级 flat 键到 5yw/5sx/5en。
+//    必须 concat 合并：bank/new/ 里的拔高题已写入 QA['5yw']，
+//    用赋值(=)会把它们整体覆盖掉（曾出过这个 bug：拔高题凭空消失）。
 ['yw','sx','en'].forEach(s => {
-  if (global.QA[s]) { global.QA['5'+s] = global.QA[s]; delete global.QA[s]; }
+  if (global.QA[s]) {
+    const k = '5' + s;
+    global.QA[k] = (global.QA[k] || []).concat(global.QA[s]);
+    delete global.QA[s];
+  }
 });
 
 const out = JSON.stringify(global.QA);
