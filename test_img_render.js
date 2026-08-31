@@ -51,4 +51,49 @@ let cok = true;
 checks.forEach(c => { if (!c[1]) { cok = false; console.log(' ✗ ' + c[0] + '  -> ' + c[2]); } else console.log(' ✓ ' + c[0]); });
 if (!cok) process.exit(1);
 
+// CDN 有 12 小时边缘缓存，电视端可能拉到比内置题库旧的 questions.json。
+// 这里模拟「旧版线上题库」：一部分题带着老远程地址、一部分干脆没有 img，
+// 验证 fillMissingImgs 能用内置题库把图补全。
+const fMap = grab(/function inlineImgMap\(\)\{[\s\S]*?\n\}/, 'inlineImgMap');
+const fFill = grab(/function fillMissingImgs\(data, map\)\{[\s\S]*?\n\}/, 'fillMissingImgs');
+const api = new Function('window', fMap + '\n' + fFill
+  + '\nreturn { map: inlineImgMap, fill: fillMissingImgs };')({ QA: bank });
+
+const builtinMap = api.map();
+const mapEntries = Object.keys(builtinMap).reduce(function (s, k) { return s + Object.keys(builtinMap[k]).length; }, 0);
+console.log('\n内置题库带图题号索引：' + Object.keys(builtinMap).length + ' 个科目 / ' + mapEntries + ' 条');
+
+// 造一份「旧版」数据：抽 30 道带图题，去掉 img；再抽 10 道改成老远程地址
+const builtin = bank;
+const stale = {};
+Object.keys(builtin).forEach(k => { stale[k] = builtin[k].map(q => Object.assign({}, q)); });
+let stripped = 0, oldUrl = 0;
+Object.keys(stale).forEach(k => {
+  stale[k].forEach(q => {
+    if (q.img && stripped < 30) { delete q.img; stripped++; }
+    else if (q.img && oldUrl < 10) { q.img = 'https://cdn.jsdelivr.net/gh/wafym1314/hz5-quiz@main/assets/' + q.img; oldUrl++; }
+  });
+});
+const filled = api.fill(stale, builtinMap);
+console.log('旧版题库中被去掉 img 的：' + stripped + ' 道');
+if (filled !== stripped) { console.log(' ✗ 补全数量不符，期望 ' + stripped + '，实际 ' + filled); process.exit(1); }
+console.log(' ✓ 自动补全 ' + filled + ' 道');
+
+// 补全后仍然要能渲染成内联 SVG
+const apiRender = new Function(bundle + '\n' + fKey + '\n' + fRender + '\n'
+  + 'return function(o){ return o.map ? null : renderImg; };')();
+let staleBad = [];
+Object.keys(stale).forEach(k => {
+  stale[k].forEach(q => {
+    if (!q.img) return;
+    const out = renderImg(q.img);
+    if (!/^<div class="quiz-img"><svg[\s\S]*<\/svg><\/div>$/.test(out)) staleBad.push(k + ':' + q.i);
+  });
+});
+if (staleBad.length) {
+  console.log(' ✗ 旧版题库补全后仍有 ' + staleBad.length + ' 道渲染不出来：' + staleBad.slice(0, 5).join(', '));
+  process.exit(1);
+}
+console.log(' ✓ 旧版题库（含远程地址）补全后全部渲染为内联 SVG');
+
 console.log('\n配图渲染冒烟测试通过 ✓（全部内联，电视端离线可见）');

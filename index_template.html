@@ -657,19 +657,50 @@ function goHome(){
 }
 
 /* ============ 外置题库：启动时自动拉取最新版，失败则用内置兜底 ============ */
+// jsDelivr 的 @main 有 12 小时边缘缓存，刚推上去的内容不一定马上拉得到，
+// 拉到的可能比内置题库旧。内置题库是本版本打包时确定的，配图信息（img）更新，
+// 所以在线题库里缺图的题目，一律用内置题库的同题号补全 —— 避免出现「提到图却没图」。
+// 注意：题号 i 只在「同一科目内」唯一，不同科目之间会重复。
+// 所以索引必须按科目分桶，否则会把别的科目的图错配到无关题目上。
+function inlineImgMap(){
+  var m = {};
+  Object.keys(window.QA).forEach(function(k){
+    var arr = window.QA[k];
+    if(!arr || !arr.length) return;
+    var sub = {};
+    arr.forEach(function(q){ if(q && q.img && q.i !== undefined) sub[q.i] = q.img; });
+    m[k] = sub;
+  });
+  return m;
+}
+function fillMissingImgs(data, map){
+  var filled = 0;
+  Object.keys(data).forEach(function(k){
+    var arr = data[k], sub = map[k];
+    if(!arr || !arr.length || !sub) return;
+    arr.forEach(function(q){
+      if(q && !q.img && q.i !== undefined && sub[q.i]){ q.img = sub[q.i]; filled++; }
+    });
+  });
+  return filled;
+}
 function loadExternalBank(){
   if(!window.fetch || !EXTERNAL_BANK_URL){ return; }
   fetch(EXTERNAL_BANK_URL)
     .then(function(r){ if(!r.ok){ throw new Error('http ' + r.status); } return r.json(); })
     .then(function(data){
       if(data && Object.keys(data).length > 0){
+        var filled = fillMissingImgs(data, inlineImgMap());
         window.QA = data;
         QA = window.QA;
         rebuildChapters();
         var total = 0;
         Object.keys(data).forEach(function(k){ if(Array.isArray(data[k])) total += data[k].length; });
         var s = document.getElementById("bankStatus");
-        if(s){ s.textContent = "题库：在线最新版（共 " + total + " 题）"; }
+        if(s){
+          s.textContent = "题库：在线最新版（共 " + total + " 题）"
+            + (filled ? "，配图补全 " + filled + " 题" : "");
+        }
         if(currentSubject){ openSubject(currentSubject); }
         else { renderHome(); }
       }
