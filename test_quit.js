@@ -103,7 +103,7 @@ console.log('=== 做题中点「退出」的修复验证（原生 confirm 已被
 
 // ---- 1) 进入做题页 ----
 api.setGrade(5);
-api.startChapter('yw', '5yw-1');   // sub 不含年级（key(g,s)=g+s），第二参是章节 id
+api.startChapter('yw', 'yw-1');   // sub 不含年级（key(g,s)=g+s）；五年级语文沿用旧章节码 yw-N
 flush();
 chk('已进入做题页', visible('view-quiz'), 'view-quiz 仍隐藏');
 chk('做题页有 20 道题', api.getQuiz().length === 20, '实际 ' + api.getQuiz().length + ' 道');
@@ -168,7 +168,7 @@ const flushMicro = () => new Promise(r => setImmediate(r));
 (async () => {
   console.log('\n=== 在线题库在做题途中返回（不得打断做题）===');
   api.setGrade(5);
-  api.startChapter('yw', '5yw-1');
+  api.startChapter('yw', 'yw-1');
   flush();
   const before = visible('view-quiz');
   const doneBefore = api.getQuiz().length;
@@ -177,7 +177,7 @@ const flushMicro = () => new Promise(r => setImmediate(r));
   bankResolve({
     ok: true,
     json: () => Promise.resolve({
-      '5yw': [{ i: 90001, c: '5yw-1', ch: '在线新题', f: 0, q: '在线题库测试题', o: ['A','B','C','D'], a: 0 }]
+      '5yw': [{ i: 90001, c: 'yw-1', ch: '在线新题', f: 0, q: '在线题库测试题', o: ['A','B','C','D'], a: 0 }]
     })
   });
   await flushMicro(); await flushMicro(); await flushMicro(); await flushMicro();
@@ -192,7 +192,7 @@ const flushMicro = () => new Promise(r => setImmediate(r));
 
   // 离开做题页后，应能用上新题库
   api.goHome();
-  api.startChapter('yw', '5yw-1');
+  api.startChapter('yw', 'yw-1');
   flush();
   chk('退出再进入后已用上在线新题库',
       api.getQuiz().some(q => q.i === 90001), '未包含在线新题');

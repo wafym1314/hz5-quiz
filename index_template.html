@@ -177,6 +177,30 @@
     font-size:14px; font-weight:800; border-radius:999px;
     vertical-align:middle; letter-spacing:.5px;
   }
+  /* 自绘弹窗：不依赖 WebView 的 alert/confirm（电视端这条链很脆弱） */
+  .ui-mask{
+    position:fixed; left:0; top:0; right:0; bottom:0; z-index:9999;
+    background:rgba(20,32,26,.55);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+    box-sizing:border-box;
+  }
+  .ui-dialog{
+    background:#fff; border-radius:18px; padding:26px 24px 20px;
+    max-width:360px; width:100%;
+    box-shadow:0 12px 40px rgba(20,32,26,.28); text-align:center;
+    box-sizing:border-box;
+  }
+  .ui-dialog-msg{ font-size:17px; line-height:1.7; color:#2f3d34; margin-bottom:22px; }
+  .ui-dialog-btns{ display:flex; gap:12px; justify-content:center; }
+  .ui-btn{
+    flex:1; padding:12px 10px; border-radius:12px; cursor:pointer;
+    font-size:16px; font-weight:700; text-align:center;
+    border:2px solid #d8e3dc; background:#fff; color:#4a5a50;
+    outline:none; user-select:none; -webkit-user-select:none;
+  }
+  .ui-btn.primary{ background:#2f7d5d; border-color:#2f7d5d; color:#fff; }
+  .ui-btn:focus{ border-color:#2f7d5d; box-shadow:0 0 0 4px rgba(47,125,93,.18); }
+  .ui-btn.primary:focus{ box-shadow:0 0 0 4px rgba(47,125,93,.32); }
 </style>
 </head>
 <body>
@@ -259,6 +283,16 @@
     </div>
   </div>
 
+  <!-- 自绘弹窗：不经过 WebView 的 alert/confirm。
+       电视盒上原生 confirm 要靠 onJsConfirm 转系统弹窗，链一断就"点了没反应"。
+       这里用静态节点 + .hidden 开关，遥控器只跟 DOM 打交道。 -->
+  <div id="uiMask" class="ui-mask hidden">
+    <div class="ui-dialog">
+      <div id="uiDialogMsg" class="ui-dialog-msg"></div>
+      <div id="uiDialogBtns" class="ui-dialog-btns"></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -294,6 +328,126 @@ var global = window;
   });
   GRADES.forEach(function(g){ SUBJECTS.forEach(function(s){ if(!window.QA[key(g,s)]) window.QA[key(g,s)] = []; }); });
 })();
+
+/* ============ 自绘弹窗 ============
+   为什么不用原生 confirm/alert：
+   原生 confirm 要靠 WebView 的 onJsConfirm 转成系统 AlertDialog，中间隔着
+   JsResult 回调、Activity 主题、系统弹窗焦点三层。电视盒子上任何一层没接住，
+   原生 confirm 就永远拿不到 true，表现出来就是「点了退出按钮没反应」。
+   改成页面内自绘弹窗后，整条链只剩 DOM，遥控器 OK 键直接由 tv-remote 脚本
+   转成 click。同时把 __uiModalOpen 置位，让 tv-remote 的定时器别来抢焦点。
+
+   结构用静态节点（#uiMask / #uiDialogMsg / #uiDialogBtns）+ .hidden 开关，
+   而不是每次动态创建：e2e_quit.js 和 test_quit.js 依赖这套 id 做断言。*/
+window.__uiModalOpen = false;
+var uiPrevFocus = null;
+
+function uiDialogClose(){
+  var mask = document.getElementById("uiMask");
+  var box  = document.getElementById("uiDialogBtns");
+  if(mask) mask.classList.add("hidden");
+  if(box)  box.innerHTML = "";
+  window.__uiModalOpen = false;
+  // 焦点要还给打开弹窗前的那个元素。掉到 body 上的话，遥控器方向键
+  // 得盲按一下才找得到落点，用户看到的就是"没反应"。
+  var p = uiPrevFocus;
+  uiPrevFocus = null;
+  if(p && p.focus){
+    try{
+      if(document.body && document.body.contains(p) && p.offsetParent !== null) p.focus();
+    }catch(e){}
+  }
+}
+
+/** 供返回键调用：弹窗开着就关掉并返回 true（表示已由页面处理） */
+function uiModalBack(){
+  if(!window.__uiModalOpen) return false;
+  uiDialogClose();
+  return true;
+}
+
+/**
+ * @param {string} msg   正文
+ * @param {Array}  btns  [{t:"确定", fn:function, primary:true}, ...]
+ */
+function uiDialog(msg, btns){
+  uiDialogClose();   // 先清掉可能残留的旧弹窗
+  var mask  = document.getElementById("uiMask");
+  var msgEl = document.getElementById("uiDialogMsg");
+  var box   = document.getElementById("uiDialogBtns");
+  if(!mask || !msgEl || !box) return;   // 结构缺失就静默跳过，别把页面搞崩
+
+  uiPrevFocus = (document.activeElement && document.activeElement !== document.body)
+                ? document.activeElement : uiPrevFocus;
+
+  msgEl.textContent = msg;
+  box.innerHTML = "";
+  var def = null;
+  btns.forEach(function(b){
+    // 用 div 而不是 button：电视端遥控器脚本只给「非 button」元素补 click，
+    // 用 button 反而可能被系统按键和脚本各触发一次
+    var el = document.createElement("div");
+    el.className = "ui-btn" + (b.primary ? " primary" : "");
+    el.setAttribute("tabindex", "0");
+    el.setAttribute("role", "button");
+    el.textContent = b.t;
+    el.onclick = function(){
+      uiDialogClose();
+      if(b.fn) b.fn();
+    };
+    box.appendChild(el);
+    if(b.primary || !def) def = el;
+  });
+
+  mask.classList.remove("hidden");
+  window.__uiModalOpen = true;
+  // 默认焦点落在「确定」上，遥控器拿起来就能按
+  setTimeout(function(){ if(def && window.__uiModalOpen) def.focus(); }, 30);
+}
+
+/** 单按钮提示框，替代原生 alert */
+function uiAlert(msg){
+  uiDialog(msg, [{ t:"好的", primary:true }]);
+}
+
+/** 双按钮确认框，替代原生 confirm；确定走 onOK，取消什么都不做 */
+function uiConfirm(msg, onOK, onCancel){
+  uiDialog(msg, [
+    { t:"取消", fn: onCancel },
+    { t:"确定", primary:true, fn: onOK }
+  ]);
+}
+
+// 弹窗内的键盘操作：OK 确认、左右切换按钮、返回键/ESC 当取消
+document.addEventListener("keydown", function(e){
+  if(!window.__uiModalOpen) return;
+  var k = e.keyCode || e.which;
+  var box = document.getElementById("uiDialogBtns");
+  if(!box) return;
+  var all = box.querySelectorAll(".ui-btn");
+  // 13=回车 23=DPAD_CENTER 66=遥控器 OK
+  if(k === 13 || k === 23 || k === 66){
+    // 电视端遥控器脚本在捕获阶段已经点过一次，这里别重复触发
+    if(e.defaultPrevented) return;
+    e.preventDefault();
+    var ae = document.activeElement;
+    if(ae && ae.click) ae.click();
+    else if(all[0]) all[0].click();
+  } else if(k === 37 || k === 21 || k === 39 || k === 22){
+    if(all.length < 2) return;
+    e.preventDefault();
+    var idx = 0;
+    for(var i=0;i<all.length;i++){ if(all[i] === document.activeElement) idx = i; }
+    var next = (k === 37 || k === 21) ? idx - 1 : idx + 1;
+    if(next < 0) next = all.length - 1;
+    if(next >= all.length) next = 0;
+    all[next].focus();
+  } else if(k === 4 || k === 111){
+    // 4=返回键 111=ESC
+    e.preventDefault();
+    uiDialogClose();
+  }
+});
 
 /* ============ 章节元数据 ============ */
 var CHAPTERS = {};
@@ -431,9 +585,9 @@ function openSubject(sub){
     return all.every(function(q){ return doneArr(k).indexOf(q.i)>=0; });
   });
   if(allDone && !state.review[k]){
-    if(confirm("这科的章节全都练完啦！要开始第二轮复习吗？复习时题目会重新出现。")){
+    uiConfirm("这科的章节全都练完啦！要开始第二轮复习吗？复习时题目会重新出现。", function(){
       state.review[k] = true; save();
-    }
+    });
   }
   var reviewTip = state.review[k] ? '<div class="part-label" style="color:#b8860b;">🔁 复习模式：所有章节题目重新出现</div>' : "";
   var html = reviewTip;
@@ -500,7 +654,7 @@ function startChapter(sub, c){
   quizQuestions = hard.slice(0, nHard).concat(rest.slice(0, CHAPTER_QUIZ_SIZE - nHard));
   shuffle(quizQuestions);   // 打乱，避免拔高题全挤在前面
   if(quizQuestions.length === 0){
-    alert("这个章节的题都练完啦，换个章节吧！");
+    uiAlert("这个章节的题都练完啦，换个章节吧！");
     return;
   }
   currentChapter = c;
@@ -597,7 +751,7 @@ function answer(idx){
 function submitFill(){
   var q = quizQuestions[quizIndex];
   var val = document.getElementById("fillInput").value.trim();
-  if(val === ""){ alert("先填上答案再提交哦"); return; }
+  if(val === ""){ uiAlert("先填上答案再提交哦"); return; }
   var ok = (val === q.a);
   if(ok) quizCorrect++;
   showFeedback(ok ? "✅ 答对了！" : "❌ 正确答案是："+q.a, ok);
@@ -645,7 +799,7 @@ function finishQuiz(){
   showView("view-result");
 }
 function confirmQuit(){
-  if(confirm("退出后这次没做完的题不会记入成绩，确定退出吗？")){ goHome(); }
+  uiConfirm("退出后这次没做完的题不会记入成绩，确定退出吗？", function(){ goHome(); });
 }
 function backToChapters(){
   renderHome();
@@ -701,7 +855,16 @@ function loadExternalBank(){
           s.textContent = "题库：在线最新版（共 " + total + " 题）"
             + (filled ? "，配图补全 " + filled + " 题" : "");
         }
-        if(currentSubject){ openSubject(currentSubject); }
+        // 关键：用户正在做题时，在线题库一到绝不能把人踢回章节页。
+        // 2MB 题库比用户点进做题页更慢，无条件 openSubject() 会把做题页连同
+        // 「← 退出」按钮一起换掉 —— 表现同样是"点了退出没反应"。
+        // 新题库已经写进 QA 且 rebuildChapters() 已跑，等用户退出做题页
+        // 再用不迟，此处保持界面不动。
+        var quizEl = document.getElementById("view-quiz");
+        var inQuiz = quizEl && quizEl.classList && !quizEl.classList.contains("hidden");
+        if(inQuiz){
+          // 正在做题：只更新状态栏，界面原样不动
+        } else if(currentSubject){ openSubject(currentSubject); }
         else { renderHome(); }
       }
     })
