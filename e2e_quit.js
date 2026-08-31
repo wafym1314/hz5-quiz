@@ -4,10 +4,32 @@
 //  B. 做题中途页面被强行切回章节页 —— 根因是在线题库（2MB+）比用户点进做题页
 //     更慢，loadExternalBank 回调里无条件 openSubject()，把正在做的题冲掉了
 const { chromium } = require('playwright-core');
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const URL = 'http://127.0.0.1:8899/index.html';
-const SHOT = 'G:/desktop/惠州五年级每日练/';
+const ROOT = __dirname;
+const PORT = 8899;
+const URL = 'http://127.0.0.1:' + PORT + '/index.html';
+const SHOT = ROOT + '/';
+
+// 自带静态服务器：以前要人工先起一个 8899 端口的服务，忘了就
+// ERR_CONNECTION_REFUSED 直接挂掉 —— 测试要么自己能跑，要么等于没写。
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8',
+               '.json': 'application/json; charset=utf-8', '.css': 'text/css; charset=utf-8' };
+function startServer() {
+  const server = http.createServer((req, res) => {
+    const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
+    const file = path.join(ROOT, rel || 'index.html');
+    if (!file.startsWith(ROOT) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      res.writeHead(404); res.end('not found'); return;
+    }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+    fs.createReadStream(file).pipe(res);
+  });
+  return new Promise(resolve => server.listen(PORT, '127.0.0.1', () => resolve(server)));
+}
 
 let pass = 0, fail = 0;
 function chk(name, cond, extra){
@@ -25,6 +47,7 @@ async function enterQuiz(page){
 }
 
 (async () => {
+  const server = await startServer();
   const browser = await chromium.launch({ executablePath: CHROME, headless: true });
   const page = await browser.newPage({ viewport: { width: 420, height: 860 } });
 
@@ -39,10 +62,13 @@ async function enterQuiz(page){
     window.alert = () => { window.__nativeAlert++; };
   });
 
-  // 关键：把在线题库延迟 3.5 秒，模拟"用户比题库快"的真实场景
+  // 关键：把在线题库延迟 3.5 秒，模拟"用户比题库快"的真实场景。
+  // 用本地导出的 questions.json 顶替 CDN：一来不依赖外网和 jsDelivr 的 12 小时
+  // 边缘缓存，二来测试的是"延迟到达会不会把人踢走"，跟题库内容无关。
+  const localBank = fs.readFileSync(path.join(ROOT, 'questions.json'), 'utf8');
   await page.route('**/questions.json', async route => {
     await new Promise(r => setTimeout(r, 3500));
-    await route.continue();
+    await route.fulfill({ status: 200, contentType: 'application/json; charset=utf-8', body: localBank });
   });
 
   await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -112,15 +138,28 @@ async function enterQuiz(page){
 
   // === C. 填空题空答案 → uiAlert 单按钮弹窗 ===
   console.log('\n=== C. 填空题空答案提示（uiAlert 单按钮）===');
+  // 注意：从主页点科目卡片进的是「章节列表」，还要再点一个章节才到做题页。
+  // 原来这里少点了那一层，C 段其实一次都没真正跑过（只是打印了"跳过"）。
   await page.click('.subj-card.yw');
   await page.waitForTimeout(500);
-  // 抽到的 20 题里通常含填空题，直接把当前题切到填空题那道
-  const moved = await page.evaluate(() => {
-    const idx = quizQuestions.findIndex(q => q.f === 1);
-    if (idx < 0) return false;
-    quizIndex = idx; renderQuestion();
-    return true;
-  });
+  await page.click('#chaptersBody .chapter-item');
+  await page.waitForTimeout(500);
+  chk('重新进入了做题页', await page.isVisible('#view-quiz'));
+  // 抽到的 20 题里不一定有填空题（语文有的章节全是选择题）。以前遇到就直接跳过，
+  // 等于这条断言时灵时不灵 —— 改成主动「换一批」，最多试 6 次直到抽到填空题。
+  let moved = false;
+  for (let t = 0; t < 6 && !moved; t++) {
+    moved = await page.evaluate(() => {
+      const idx = quizQuestions.findIndex(q => q.f === 1);
+      if (idx >= 0) { quizIndex = idx; renderQuestion(); return true; }
+      return false;
+    });
+    if (!moved) {
+      await page.evaluate(() => refreshQuiz());
+      await page.waitForTimeout(250);
+    }
+  }
+  chk('能在本科目抽到填空题（测试前提）', moved, '连续 6 批都没有填空题');
   if (moved && await page.isVisible('#quizBody input')) {
     await page.click('#quizBody .btn');
     await page.waitForTimeout(500);
@@ -142,6 +181,7 @@ async function enterQuiz(page){
   chk('页面无 JS 报错', errors.length === 0, errors.slice(0, 3).join(' | '));
 
   await browser.close();
+  server.close();
   console.log('\n通过 ' + pass + ' 项，失败 ' + fail + ' 项');
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.log('运行异常: ' + e.message); process.exit(1); });

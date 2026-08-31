@@ -4,3 +4,6 @@ publish/
 probe_*.js
 probe_*.log
 probe_*.png
+
+# e2e_quit.js 每次运行重新生成的截图
+_shot_*.png
