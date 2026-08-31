@@ -125,6 +125,14 @@
   /* 做题页 */
   .quiz-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
   .quiz-progress { font-size:15px; font-weight:700; color:#7b8a80; }
+  /* 「换一批」按钮：做题页随时可点，重抽一批新题 */
+  .refresh-btn {
+    background:#fff; border:2px solid #2f7d5d; color:#2f7d5d;
+    border-radius:999px; padding:6px 14px; font-size:13px; font-weight:800;
+    cursor:pointer; white-space:nowrap;
+  }
+  .refresh-btn:active { transform:scale(.96); }
+  .refresh-btn:focus { outline:3px solid #f3c74f; outline-offset:2px; }
   .progress-track { height:10px; background:#e6ece8; border-radius:8px; overflow:hidden; margin-bottom:16px; }
   .progress-fill { height:100%; background:#2f7d5d; border-radius:8px; transition:width .2s ease; }
   .quiz-card { background:#fff; border-radius:18px; padding:22px 20px; box-shadow:0 2px 10px rgba(47,61,52,.06); }
@@ -252,7 +260,10 @@
       <button class="back-btn" onclick="confirmQuit()">← 退出</button>
       <h1 id="quizSubjectTitle"></h1>
     </div>
-    <div class="quiz-head"><span class="quiz-progress" id="quizProgress"></span></div>
+    <div class="quiz-head">
+      <span class="quiz-progress" id="quizProgress"></span>
+      <button class="refresh-btn" id="quizRefresh" onclick="refreshQuiz()">🔄 换一批</button>
+    </div>
     <div class="progress-track"><div class="progress-fill" id="quizFill"></div></div>
     <div class="quiz-card">
       <div class="quiz-chapter" id="quizChapter"></div>
@@ -619,59 +630,119 @@ var quizCorrect = 0;
 var CHAPTER_QUIZ_SIZE = 20;   // 每个章节每次练习的题量
 var HARD_MIN = 8;             // 每次练习至少包含的拔高题（d:2）道数，保证重点班难度
 
+/* ===== 抽题：每次进入都换一批，本章练完也不锁死 =====
+   拆成 buildPool / applyHardMix 两步：
+   - buildPool    只管「按优先级凑够题目」，不管难度配比；
+   - applyHardMix 只管「保证拔高题占比」。
+   这样「换一批」按钮和进入章节能复用同一套规则，不会出现两处抽题逻辑不一致。 */
+function buildPool(k, c){
+  var all = QA[k] || [];
+  var done = doneArr(k);
+  var review = !!state.review[k];        // 复习模式：所有题都当成「新题」
+  var SIZE = CHAPTER_QUIZ_SIZE;
+
+  function isFresh(q){ return review || done.indexOf(q.i) < 0; }
+
+  var chAll   = all.filter(function(q){ return q.c === c; });
+  var other   = all.filter(function(q){ return q.c !== c; });
+  var chFresh = shuffle(chAll.filter(isFresh));
+  var otFresh = shuffle(other.filter(isFresh));
+
+  var picked = [], used = {};
+  function take(list, limit){
+    var cap = (limit === undefined) ? SIZE : Math.min(limit, SIZE);
+    for(var i = 0; i < list.length && picked.length < cap; i++){
+      var q = list[i];
+      if(used[q.i]) continue;
+      used[q.i] = 1;
+      picked.push(q);
+    }
+  }
+
+  if(chFresh.length > 0){
+    // 本章还有没做的题：先把本章练透。不足 20 道时依次用「本章做过的题 →
+    // 同科其它章节新题 → 同科其它章节做过的题」补足，保证不跑题。
+    take(chFresh);
+    take(shuffle(chAll.filter(function(q){ return !isFresh(q); })));
+    take(otFresh);
+    take(shuffle(other.filter(function(q){ return !isFresh(q); })));
+  } else {
+    // 本章已全部练完：不再弹「练完啦」把人锁死，改成「本章为主 + 同科其它章节」
+    // 的综合练习。保留约六成本章题，既换了新一批，又不至于跑题太远。
+    take(shuffle(chAll), Math.max(1, Math.round(SIZE * 0.6)));
+    take(otFresh);
+    take(shuffle(other.filter(function(q){ return !isFresh(q); })));
+  }
+  take(all);   // 兜底：题量极少的科目也要尽量凑满
+  return picked;
+}
+
+/* 拔高题配比：优先取 HARD_MIN 道 d:2 拔高题，其余用普通题补齐。
+   1~3 年级没有拔高题（hard 为空），此时 nHard=0，全部取普通题 —— 属于正常降级。 */
+function applyHardMix(pool){
+  var hard = pool.filter(function(q){ return q.d === 2; });
+  var norm = pool.filter(function(q){ return q.d !== 2; });
+  shuffle(hard); shuffle(norm);
+  var nHard = Math.min(HARD_MIN, hard.length);
+  // 抽剩的拔高题要并入普通题一起候补，否则拔高题多于 HARD_MIN 时
+  // 多出来的会被白白丢掉，导致总题数凑不满 20（曾出过：只抽出 19 题）
+  var rest = hard.slice(nHard).concat(norm);
+  shuffle(rest);
+  return hard.slice(0, nHard).concat(rest.slice(0, Math.max(0, CHAPTER_QUIZ_SIZE - nHard)));
+}
+
 function startChapter(sub, c){
   currentSubject = sub;
   var k = key(currentGrade, sub);
   var all = QA[k] || [];
-  var pool;
-  if(state.review[k]){
-    pool = all.filter(function(q){ return q.c===c; });
-  } else {
-    pool = all.filter(function(q){ return q.c===c && doneArr(k).indexOf(q.i)<0; });
-  }
-  // 本章本身题量不足 CHAPTER_QUIZ_SIZE 时，用同科目其它章节补足，保证一次能练够
-  // 注意：只在本章还有没做的题时才补，否则会导致章节永远练不完
-  var total = all.filter(function(q){ return q.c===c; }).length;
-  var supplemented = 0;
-  if(pool.length > 0 && total < CHAPTER_QUIZ_SIZE){
-    var extra = all.filter(function(q){ return q.c!==c && doneArr(k).indexOf(q.i)<0; });
-    shuffle(extra);
-    var need = CHAPTER_QUIZ_SIZE - pool.length;
-    if(extra.length < need) need = extra.length;
-    supplemented = need;
-    pool = pool.concat(extra.slice(0, need));
-  }
-  // 保证拔高题占比：先从池子里取够 HARD_MIN 道 d:2 拔高题，不够的部分用普通题补齐。
-  // 1~3 年级没有拔高题（hard 为空），此时 nHard=0，全部取普通题 —— 属于正常降级。
-  var hard = pool.filter(function(q){ return q.d===2; });
-  var norm = pool.filter(function(q){ return q.d!==2; });
-  shuffle(hard); shuffle(norm);
-  var nHard = Math.min(HARD_MIN, hard.length);
-  // 注意：抽剩的拔高题要并入普通题一起候补，否则拔高题多于 HARD_MIN 时
-  // 多出来的会被白白丢掉，导致总题数凑不满 20（曾出过：只抽出 19 题）
-  var rest = hard.slice(nHard).concat(norm);
-  shuffle(rest);
-  quizQuestions = hard.slice(0, nHard).concat(rest.slice(0, CHAPTER_QUIZ_SIZE - nHard));
+  var pool = buildPool(k, c);
+  if(pool.length === 0){ uiAlert("这个科目还没有题目哦～"); return; }
+  quizQuestions = applyHardMix(pool);
   shuffle(quizQuestions);   // 打乱，避免拔高题全挤在前面
-  if(quizQuestions.length === 0){
-    uiAlert("这个章节的题都练完啦，换个章节吧！");
-    return;
-  }
   currentChapter = c;
   quizIndex = 0;
   quizCorrect = 0;
+  var chTotal = all.filter(function(q){ return q.c===c; }).length;
+  var chCount = quizQuestions.filter(function(q){ return q.c===c; }).length;
+  var nHard   = quizQuestions.filter(function(q){ return q.d===2; }).length;
   var title = currentGrade+"年级 " + SUBJECT_NAMES[sub] + " · 练习";
-  if(supplemented > 0) title += "（本章共 "+total+" 题，已补充 "+supplemented+" 道同科题目）";
+  if(chCount < CHAPTER_QUIZ_SIZE){
+    title += "（本章 "+chTotal+" 题，已补 "+(CHAPTER_QUIZ_SIZE-chCount)+" 道同科题目）";
+  }
   if(nHard > 0) title += " · 含 "+nHard+" 道拔高题";
   document.getElementById("quizSubjectTitle").textContent = title;
   showView("view-quiz");
   renderQuestion();
 }
+
+/* 「换一批」：重抽一批新题，回到第 1 题。
+   每次进入章节本身就会重抽一批，这个按钮是给「这批想换换口味」用的。 */
+function refreshQuiz(){
+  if(!currentSubject || !currentChapter) return;
+  var prevIds = quizQuestions.map(function(q){ return q.i; }).join(",");
+  var next = [];
+  // 极小概率抽到完全相同的一批，重试几次，保证「点了确实换了一批」
+  for(var guard = 0; guard < 8; guard++){
+    next = applyHardMix(buildPool(key(currentGrade, currentSubject), currentChapter));
+    if(next.map(function(q){ return q.i; }).join(",") !== prevIds) break;
+  }
+  quizQuestions = next;
+  shuffle(quizQuestions);
+  quizIndex = 0;
+  quizCorrect = 0;
+  renderQuestion();
+}
+
+/* 「重做本章」：重新抽一批开始。
+   特意不清除已完成记录 —— 否则章节的「已完成」状态会被意外打回未练习。 */
+function restartChapter(){ refreshQuiz(); }
+
 function shuffle(arr){
   for(var i=arr.length-1;i>0;i--){
     var j = Math.floor(Math.random()*(i+1));
     var t = arr[i]; arr[i]=arr[j]; arr[j]=t;
   }
+  return arr;   // 返回自身，方便 shuffle(x).slice(...) 这类链式写法
 }
 /* ===== 题目配图渲染 =====
    电视盒子的 WebView 加载的是 file:///android_asset/index.html，

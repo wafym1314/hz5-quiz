@@ -27,6 +27,8 @@ const els = {};
 const document = {
   getElementById(id){ if(!els[id]) els[id] = makeEl(); return els[id]; },
   createElement(t){ return makeEl(t); },
+  // 页面脚本里自绘弹窗会注册 keydown 监听，stub 必须提供，否则 eval 直接崩
+  addEventListener(){},
   querySelectorAll(){ return []; }
 };
 const localStorage = { _m:{}, getItem(k){return this._m[k]||null;}, setItem(k,v){this._m[k]=String(v);}, removeItem(k){delete this._m[k];} };

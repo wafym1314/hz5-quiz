@@ -40,6 +40,8 @@ const els = {};
 global.document = {
   getElementById(id){ if(!els[id]) els[id] = makeEl(); return els[id]; },
   createElement(){ return makeEl(); },
+  // 页面脚本里自绘弹窗会注册 keydown 监听，stub 必须提供，否则 eval 直接崩
+  addEventListener(){},
   querySelectorAll(sel){
     if(sel === '#quizBody .option'){
       var b = els['quizBody'];

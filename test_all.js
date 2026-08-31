@@ -69,7 +69,17 @@ results.push(['test_img_render.js 配图渲染',
 results.push(['test_quit.js 退出键回归',
   run('test_quit.js 退出键回归', ROOT, path.join(ROOT, 'test_quit.js'))]);
 
-// 4) 电视端：重建页面 + 弹窗行为/遥控器 OK 键
+// 4) 换题回归：每次进入都换一批、本章练完不锁死、「换一批」按钮可用。
+//    这段逻辑曾整段从模板里丢失（和退出键一样的回归），之前没被门禁覆盖，
+//    现在补进来 —— 模板再被覆盖回去就会立刻报警。
+results.push(['test_refresh.js 换题与练完不锁死',
+  run('test_refresh.js 换题与练完不锁死', ROOT, path.join(ROOT, 'test_refresh.js'))]);
+
+// 5) 核心流程冒烟：抽题、计分、打卡、复习模式、填空、配图
+results.push(['smoke_test.js 核心流程冒烟',
+  run('smoke_test.js 核心流程冒烟', ROOT, path.join(ROOT, 'smoke_test.js'))]);
+
+// 6) 电视端：重建页面 + 弹窗行为/遥控器 OK 键
 if (want('--tv')) {
   if (fs.existsSync(TV)) {
     results.push(['build_tv.js 电视端页面',
@@ -87,7 +97,7 @@ if (want('--tv')) {
   }
 }
 
-// 5) 真实浏览器端到端（最贴近用户实际，但需要 playwright-core + Chrome）
+// 7) 真实浏览器端到端（最贴近用户实际，但需要 playwright-core + Chrome）
 if (want('--e2e')) {
   results.push(['e2e_quit.js 浏览器端到端',
     run('e2e_quit.js 浏览器端到端', ROOT, path.join(ROOT, 'e2e_quit.js'),
