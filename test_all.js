@@ -102,6 +102,9 @@ if (want('--e2e')) {
   results.push(['e2e_quit.js 浏览器端到端',
     run('e2e_quit.js 浏览器端到端', ROOT, path.join(ROOT, 'e2e_quit.js'),
         { env, timeout: 300000 })]);
+  results.push(['test_refresh_e2e.js 换题端到端',
+    run('test_refresh_e2e.js 换题端到端', ROOT, path.join(ROOT, 'test_refresh_e2e.js'),
+        { env, timeout: 600000 })]);
 }
 
 const bad = results.filter(r => !r[1]);

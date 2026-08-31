@@ -1,1 +1,6 @@
 publish/
+
+# 一次性排查脚本与产物（probe 系列只在定位问题时临时用，不入仓库）
+probe_*.js
+probe_*.log
+probe_*.png
