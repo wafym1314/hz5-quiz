@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 160">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 160" width="320" height="160" preserveAspectRatio="xMidYMid meet">
 <rect width="320" height="160" fill="#fff"/>
 <text x="10" y="18" font-size="12" fill="#333">月相变化（约29.5天一轮）</text>
 <g>

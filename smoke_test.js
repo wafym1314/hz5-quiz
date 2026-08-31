@@ -27,6 +27,9 @@ function makeEl(){
   el.appendChild = function(child){ this._children.push(child); };
   el.focus = function(){};
   el.setAttribute = function(){};
+  el.onclick = null;
+  el.click = function(){ if(typeof this.onclick === 'function') this.onclick({ target: this }); };
+  el.addEventListener = function(){};
   el.querySelectorAll = function(sel){
     if(sel === '.option') return this._children.filter(c => c.className && c.className.indexOf('option') >= 0);
     return [];
@@ -69,11 +72,11 @@ assert(els['gradeTabs'].innerHTML.indexOf('5年级') >= 0, '年级标签未渲�
 assert(els['subjectCards'].innerHTML.indexOf('语文') >= 0, '科目卡片未渲染');
 console.log('✓ 主页渲染（年级选择 + 四科卡片）正常');
 
-// T3 章节抽题 10 道
+// T3 章节抽题 20 道
 currentGrade = '5';
 startChapter('yw','yw-1');
-assert(quizQuestions.length === 10, '应抽10题，实际'+quizQuestions.length);
-console.log('✓ 章节抽题 10 道正常');
+assert(quizQuestions.length === 20, '应抽20题，实际'+quizQuestions.length);
+console.log('✓ 章节抽题 20 道正常');
 
 // T4 全对 → 3 朵花 + 打卡 + 记录
 for (let i=0;i<quizQuestions.length;i++){
@@ -88,12 +91,15 @@ assert(state.done[k5yw].length >= 10, '应记录已做题');
 assert(isSubjectDoneToday(k5yw), '应打卡');
 console.log('✓ 全对 → 3朵小红花 + 打卡 + 记录');
 
-// T5 做过的题不再出现
+// T5 章节练完后仍可继续练（自动换一批），不再被"练完啦"锁死
 startChapter('yw','yw-1');
-assert(quizQuestions.length === 0, '做过的题不应再出现');
-console.log('✓ 做过的题不再出现');
+assert(quizQuestions.length === 20, '练完后应仍能换一批抽到20题，实际'+quizQuestions.length);
+console.log('✓ 章节练完后仍能换一批继续练（20 道，不再锁死）');
 
-// T6 章节状态
+// T6 章节状态（"已完成"要求本章全部题目都做过，先把 yw-1 补全再校验）
+QA['5yw'].filter(q => q.c === 'yw-1').forEach(q => {
+  if (state.done[k5yw].indexOf(q.i) < 0) state.done[k5yw].push(q.i);
+});
 openSubject('yw');
 assert(els['chaptersBody'].innerHTML.indexOf('已完成') >= 0, '章节应显示已完成');
 console.log('✓ 章节状态正确（已完成）');
@@ -102,13 +108,17 @@ console.log('✓ 章节状态正确（已完成）');
 QA['5yw'].forEach(q => { if (state.done[k5yw].indexOf(q.i)<0) state.done[k5yw].push(q.i); });
 save();
 openSubject('yw');
+// 全部完成后会弹自定义确认框（替代原生的同步 confirm），点「确定」才进入复习模式
+var yesBtn = els['uiDialogBtns']._children.filter(function(b){ return b.textContent === '确定'; })[0];
+assert(yesBtn, '应弹出"开始第二轮复习"确认框');
+yesBtn.click();
 assert(state.review[k5yw] === true, '应进入复习模式');
-console.log('✓ 全部章节完成后自动进入复习模式');
+console.log('✓ 全部章节完成后确认后进入复习模式');
 
 // T8 复习模式重新抽题
 startChapter('yw','yw-1');
-assert(quizQuestions.length === 10, '复习模式应重新抽10题');
-console.log('✓ 复习模式题目重新出现');
+assert(quizQuestions.length === 20, '复习模式应重新抽20题，实际'+quizQuestions.length);
+console.log('✓ 复习模式题目重新出现（20 道）');
 
 // T9 日历
 renderCalendar();

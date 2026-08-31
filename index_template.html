@@ -129,7 +129,8 @@
   .progress-fill { height:100%; background:#2f7d5d; border-radius:8px; transition:width .2s ease; }
   .quiz-card { background:#fff; border-radius:18px; padding:22px 20px; box-shadow:0 2px 10px rgba(47,61,52,.06); }
   .quiz-chapter { font-size:13px; color:#8a978e; margin-bottom:8px; }
-  .quiz-img { width:100%; max-width:300px; margin:0 auto 16px; display:block; border-radius:12px; background:#fff; border:1px solid #e3eae6; }
+  .quiz-img { max-width:300px; margin:0 auto 16px; border-radius:12px; background:#fff; border:1px solid #e3eae6; overflow:hidden; }
+  .quiz-img > svg, .quiz-img > img { width:100%; height:auto; display:block; }
   .quiz-q { font-size:19px; font-weight:700; line-height:1.6; margin-bottom:18px; }
   .option {
     display:block; width:100%; text-align:left;
@@ -278,6 +279,7 @@ window.QA = { yw:[], sx:[], en:[] };
 var QA = window.QA;
 // 兼容题库文件里的 global.QA 引用：浏览器没有 global，这里给一个 window 的别名
 var global = window;
+/*__IMGS__*/
 /*__BANK__*/
 (function migrate(){
   ["yw","sx","en"].forEach(function(s){
@@ -517,6 +519,36 @@ function shuffle(arr){
     var t = arr[i]; arr[i]=arr[j]; arr[j]=t;
   }
 }
+/* ===== 题目配图渲染 =====
+   电视盒子的 WebView 加载的是 file:///android_asset/index.html，
+   img 原来存的是 https://cdn.jsdelivr.net/... 远程地址，盒子取不到就整块空白。
+   所以配图一律优先走内联的 SVG_IMGS（随 HTML 一起打包，离线可用）；
+   字典里没有的才退回 <img>，加载失败再自动隐藏，不留破图。 */
+function imgKeyOf(src){
+  if(typeof src !== "string") return "";
+  var m = src.match(/assets\/(.+\.svg)$/);   // 兼容老数据里残留的完整 CDN 地址
+  return m ? m[1] : src;
+}
+function renderImg(src){
+  if(!src) return "";
+  if(src.charAt(0) === "<") return '<div class="quiz-img">' + src + '</div>';   // 本身就是 SVG 源码
+  var key = imgKeyOf(src);
+  if(typeof SVG_IMGS !== "undefined" && SVG_IMGS && SVG_IMGS[key]){
+    return '<div class="quiz-img">' + SVG_IMGS[key] + '</div>';
+  }
+  // 字典里没有：退回 <img>，失败时先尝试同名本地图，再隐藏
+  return '<div class="quiz-img"><img src="' + src + '" alt="题目配图" data-key="'
+    + key + '" onerror="imgFail(this)"></div>';
+}
+function imgFail(el){
+  var key = el.getAttribute("data-key");
+  if(key && typeof SVG_IMGS !== "undefined" && SVG_IMGS && SVG_IMGS[key] && !el.getAttribute("data-fallback")){
+    el.setAttribute("data-fallback", "1");
+    el.parentNode.innerHTML = SVG_IMGS[key];
+    return;
+  }
+  el.parentNode.style.display = "none";
+}
 function renderQuestion(){
   var q = quizQuestions[quizIndex];
   document.getElementById("quizProgress").textContent = "第 "+(quizIndex+1)+" / "+quizQuestions.length+" 题";
@@ -524,7 +556,7 @@ function renderQuestion(){
   // 章节标题后跟一个「拔高」标记（d:2 = 重点班难度题）
   document.getElementById("quizChapter").innerHTML =
     q.ch + (q.d === 2 ? ' <span class="hard-badge">拔高</span>' : '');
-  document.getElementById("quizImg").innerHTML = q.img ? '<img class="quiz-img" src="'+q.img+'" alt="题目配图">' : "";
+  document.getElementById("quizImg").innerHTML = renderImg(q.img);
   document.getElementById("quizQ").textContent = q.q;
   document.getElementById("quizFeedback").className = "feedback";
   document.getElementById("quizExplain").className = "explain";

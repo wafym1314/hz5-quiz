@@ -43,9 +43,15 @@ QA["1yw"].push(
 
 ## 科学科目额外要求（sci）
 - 需要图示的题目，请生成 **SVG 文件** 存到 `G:/desktop/惠州五年级每日练/assets/gNsci/` 目录（例如 `g1sci/plant.svg`），并在该题加字段：
-  `img:"https://cdn.jsdelivr.net/gh/wafym1314/hz5-quiz@main/assets/g1sci/plant.svg"`
+  `img:"g1sci/plant.svg"`
+- ⚠️ img **只填相对路径**（`目录/文件名.svg`），**绝不要写 `https://cdn.jsdelivr.net/...` 远程地址**。
+  电视盒子的 WebView 加载的是 `file:///android_asset/index.html`，远程地址取不到就是整块空白。
+  相对路径会由 `build_imgs.js` 把所有 SVG 打包成内联字典 `SVG_IMGS` 注入页面，断网也能显示。
+- 新写的 SVG **根节点必须带 `width` 和 `height`**（如 `<svg ... width="320" height="200">`），
+  否则老版本 Android WebView 会把图渲染成 0 高度。跑 `build_imgs.js` 会自动补，但最好自己就带上。
 - SVG 要简单清晰、带中文标注；可先读 `G:/desktop/惠州五年级每日练/assets/g5sci/` 下的示例学习风格（用 Read 工具看 `reflection.svg`、`earthlayers.svg` 等）。
 - 每张带 `img` 的题都必须有对应的 svg 文件，文件名与 img 路径一致。
+- 写完 SVG 后要跑 `node build_imgs.js` 重新打包，再跑 `node verify.js`（会校验每张图都能命中）。
 - 配图题目建议每章 1~2 题即可（如结构图、示意图、实验图、食物链、水循环、简单电路等）。
 
 ## 自查（写完必须跑）

@@ -6,7 +6,8 @@ import os, random
 BASE="G:/desktop/惠州五年级每日练"
 ASSET_DIR=os.path.join(BASE,"assets","g5sci")
 os.makedirs(ASSET_DIR, exist_ok=True)
-CDN="https://cdn.jsdelivr.net/gh/wafym1314/hz5-quiz@main/assets/g5sci/"
+# img 只存相对 key；build_imgs.js 会把 SVG 打包成内联字典注入页面（电视端断网也能显示）
+CDN="g5sci/"
 
 # ---------- SVG 图示 ----------
 SVGS = {}

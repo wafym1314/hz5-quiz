@@ -51,6 +51,29 @@ Object.keys(global.QA).forEach(k => {
   console.log(k + ': ' + arr.length + ' 题, ' + Object.keys(seen).length + ' 个不同题号');
 });
 
+// ---- 校验题目里的 img 都能在内联包里找到 ----
+// 必须赶在下面重置 global.QA 之前做：此刻的 QA 才是带配图补丁的完整题库
+const IMG_BUNDLE = path + '/img_bundle.js';
+if (!fs.existsSync(IMG_BUNDLE)) { console.error('缺少 img_bundle.js，请先运行 build_imgs.js'); process.exit(1); }
+const imgSrc = fs.readFileSync(IMG_BUNDLE, 'utf8');
+const imgs = JSON.parse(imgSrc.replace(/^[\s\S]*?var SVG_IMGS\s*=\s*/, '').replace(/;\s*$/, ''));
+let imgMiss = [], imgTotal = 0;
+Object.keys(global.QA).forEach(k => {
+  global.QA[k].forEach(q => {
+    if (!q.img) return;
+    imgTotal++;
+    const mm = q.img.match(/assets\/(.+\.svg)$/);
+    const key = mm ? mm[1] : q.img;
+    if (!imgs[key]) imgMiss.push('[' + k + ':' + q.i + '] ' + q.img);
+  });
+});
+if (imgMiss.length) {
+  console.log('\n配图缺失 ' + imgMiss.length + ' 处:');
+  imgMiss.slice(0, 30).forEach(e => console.log(' -', e));
+  process.exit(1);
+}
+console.log('配图校验通过 ✓（' + imgTotal + ' 道带图题目，' + Object.keys(imgs).length + ' 张内联图，全部命中）');
+
 // ---- 合并到模板 ----
 const tpl = fs.readFileSync(path + '/index_template.html', 'utf8');
 if (tpl.indexOf('/*__BANK__*/') < 0) { console.error('模板中找不到占位符'); process.exit(1); }
@@ -61,7 +84,8 @@ global.QA = { yw:[], sx:[], en:[] };
 if (fs.existsSync(NEW_DIR)) {
   fs.readdirSync(NEW_DIR).filter(f => f.endsWith('.js')).forEach(f => { bankSrc += fs.readFileSync(NEW_DIR + '/' + f, 'utf8') + '\n'; });
 }
-const out = tpl.replace('/*__BANK__*/', bankSrc);
+if (tpl.indexOf('/*__IMGS__*/') < 0) { console.error('模板中找不到配图占位符 /*__IMGS__*/'); process.exit(1); }
+const out = tpl.replace('/*__IMGS__*/', imgSrc).replace('/*__BANK__*/', bankSrc);
 fs.writeFileSync(path + '/index.html', out, 'utf8');
 console.log('index.html 已生成, 大小 ' + (out.length/1024).toFixed(1) + ' KB');
 
