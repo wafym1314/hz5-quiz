@@ -8214,8 +8214,15 @@ function shuffle(arr){
 /* ===== 题目配图渲染 =====
    电视盒子的 WebView 加载的是 file:///android_asset/index.html，
    img 原来存的是 https://cdn.jsdelivr.net/... 远程地址，盒子取不到就整块空白。
-   所以配图一律优先走内联的 SVG_IMGS（随 HTML 一起打包，离线可用）；
-   字典里没有的才退回 <img>，加载失败再自动隐藏，不留破图。 */
+   所以配图一律优先走内联的 SVG_IMGS（随 HTML 一起打包，离线可用）。
+
+   兼容性处理：
+   - 对 SVG_IMGS 命中的图片直接输出内联 <svg>。老 Android WebView 对
+     data URI <img> 的支持参差不齐（有的不支持 ;utf8、有的对长 data URI 截断、
+     有的不触发 onerror），直接内联 SVG 是最稳的方案。
+   - build_imgs.js 已给每张 SVG 补上 width/height/viewBox，页面 CSS 里的
+     .quiz-img > svg { width:100%; height:auto; } 保证大屏上自适应。
+   - 仅对 SVG_IMGS 里找不到的外部地址，才退回到 <img>，失败时隐藏，不留破图。 */
 function imgKeyOf(src){
   if(typeof src !== "string") return "";
   var m = src.match(/assets\/(.+\.svg)$/);   // 兼容老数据里残留的完整 CDN 地址
@@ -8226,16 +8233,16 @@ function renderImg(src){
   if(src.charAt(0) === "<") return '<div class="quiz-img">' + src + '</div>';   // 本身就是 SVG 源码
   var key = imgKeyOf(src);
   if(typeof SVG_IMGS !== "undefined" && SVG_IMGS && SVG_IMGS[key]){
+    // 内联 SVG：不经过 data URI / onerror，老 WebView 最可靠
     return '<div class="quiz-img">' + SVG_IMGS[key] + '</div>';
   }
-  // 字典里没有：退回 <img>，失败时先尝试同名本地图，再隐藏
+  // 字典里没有：外部 URL 兜底，加载失败则隐藏
   return '<div class="quiz-img"><img src="' + src + '" alt="题目配图" data-key="'
     + key + '" onerror="imgFail(this)"></div>';
 }
 function imgFail(el){
   var key = el.getAttribute("data-key");
-  if(key && typeof SVG_IMGS !== "undefined" && SVG_IMGS && SVG_IMGS[key] && !el.getAttribute("data-fallback")){
-    el.setAttribute("data-fallback", "1");
+  if(key && typeof SVG_IMGS !== "undefined" && SVG_IMGS && SVG_IMGS[key]){
     el.parentNode.innerHTML = SVG_IMGS[key];
     return;
   }

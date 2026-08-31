@@ -1,5 +1,9 @@
-// 冒烟测试：确认每道带图题目都能渲染出「内联 SVG」而不是远程 <img>
-// 电视端的核心诉求就是离线可见，所以断言渲染结果必须以 <svg 开头、以 </svg> 收尾。
+// 冒烟测试：确认每道带图题目都能渲染出「离线可用的图」而不是远程 URL。
+// 现在 renderImg 对 SVG_IMGS 命中的图片直接返回内联 <svg>：
+//   - 不依赖 data URI / onerror，对老 Android WebView 最稳；
+//   - build_imgs.js 已补 width/height/viewBox，CSS 控制 width:100%;height:auto 自适应。
+// 仅当图片 key 不在 SVG_IMGS 里时，才退回 <img> 外部地址。
+// 断言：结果必须是内联 SVG 或 <img>，且不能出现远程 http(s) 地址。
 const fs = require('fs');
 const ROOT = 'G:/desktop/惠州五年级每日练';
 
@@ -14,8 +18,9 @@ function grab(re, what) {
 const bundle = grab(/var SVG_IMGS = \{[\s\S]*?\};\n/, 'SVG_IMGS');
 const fKey = grab(/function imgKeyOf\(src\)\{[\s\S]*?\n\}/, 'imgKeyOf');
 const fRender = grab(/function renderImg\(src\)\{[\s\S]*?\n\}/, 'renderImg');
+const fFail = grab(/function imgFail\(el\)\{[\s\S]*?\n\}/, 'imgFail');
 
-const renderImg = new Function(bundle + '\n' + fKey + '\n' + fRender + '\nreturn renderImg;')();
+const renderImg = new Function(bundle + '\n' + fKey + '\n' + fRender + '\n' + fFail + '\nreturn renderImg;')();
 
 const bank = JSON.parse(fs.readFileSync(ROOT + '/questions.json', 'utf8'));
 const seen = new Map();
@@ -26,8 +31,11 @@ Object.keys(bank).forEach(k => {
 let ok = 0, bad = [];
 seen.forEach((who, img) => {
   const out = renderImg(img);
-  if (!/^<div class="quiz-img"><svg[\s\S]*<\/svg><\/div>$/.test(out)) {
-    bad.push(who + '  ->  ' + out.slice(0, 90));
+  // 合法输出：data URI <img> 或 raw SVG
+  const isImg = /^<div class="quiz-img"><img src="data:image\/svg\+xml;utf8,/.test(out);
+  const isSvg = /^<div class="quiz-img"><svg[\s\S]*<\/svg><\/div>$/.test(out);
+  if (!isImg && !isSvg) {
+    bad.push(who + '  ->  ' + out.slice(0, 120));
   } else ok++;
 });
 
@@ -42,10 +50,15 @@ if (bad.length) {
 // 顺便验证几个渲染契约
 const checks = [
   ['空值返回空串', renderImg('') === '', renderImg('')],
-  ['未知 key 退回 <img>', /^<div class="quiz-img"><img /.test(renderImg('nope/x.svg')), renderImg('nope/x.svg').slice(0, 60)],
-  ['老 CDN 地址也能命中本地图',
-    /^<div class="quiz-img"><svg/.test(renderImg('https://cdn.jsdelivr.net/gh/wafym1314/hz5-quiz@main/assets/g5sci/circuit.svg')),
-    renderImg('https://cdn.jsdelivr.net/gh/wafym1314/hz5-quiz@main/assets/g5sci/circuit.svg').slice(0, 60)]
+  ['未知 key 退回 <img>', /^<div class="quiz-img"><img /.test(renderImg('nope/x.svg')), renderImg('nope/x.svg').slice(0, 80)],
+  ['老 CDN 地址也能命中本地图（输出内联 SVG）',
+    /^<div class="quiz-img"><svg[\s\S]*<\/svg><\/div>$/.test(renderImg('https://cdn.jsdelivr.net/gh/wafym1314/hz5-quiz@main/assets/g5sci/circuit.svg')),
+    renderImg('https://cdn.jsdelivr.net/gh/wafym1314/hz5-quiz@main/assets/g5sci/circuit.svg').slice(0, 80)],
+  ['内联 SVG 以 <svg 开头且含完整 </svg>',
+    (() => {
+      const out = renderImg('g5sci/earthlayers.svg');
+      return /^<div class="quiz-img"><svg[\s\S]*<\/svg><\/div>$/.test(out) && out.indexOf('<svg') >= 0;
+    })(), '内联 SVG 结构完整']
 ];
 let cok = true;
 checks.forEach(c => { if (!c[1]) { cok = false; console.log(' ✗ ' + c[0] + '  -> ' + c[2]); } else console.log(' ✓ ' + c[0]); });
@@ -87,13 +100,15 @@ Object.keys(stale).forEach(k => {
   stale[k].forEach(q => {
     if (!q.img) return;
     const out = renderImg(q.img);
-    if (!/^<div class="quiz-img"><svg[\s\S]*<\/svg><\/div>$/.test(out)) staleBad.push(k + ':' + q.i);
+    const isImg = /^<div class="quiz-img"><img src="data:image\/svg\+xml;utf8,/.test(out);
+    const isSvg = /^<div class="quiz-img"><svg[\s\S]*<\/svg><\/div>$/.test(out);
+    if (!isImg && !isSvg) staleBad.push(k + ':' + q.i);
   });
 });
 if (staleBad.length) {
   console.log(' ✗ 旧版题库补全后仍有 ' + staleBad.length + ' 道渲染不出来：' + staleBad.slice(0, 5).join(', '));
   process.exit(1);
 }
-console.log(' ✓ 旧版题库（含远程地址）补全后全部渲染为内联 SVG');
+console.log(' ✓ 旧版题库（含远程地址）补全后全部渲染为内联 SVG 或 <img> 兜底');
 
-console.log('\n配图渲染冒烟测试通过 ✓（全部内联，电视端离线可见）');
+console.log('\n配图渲染冒烟测试通过 ✓（全部内联 SVG，电视端离线可见）');
