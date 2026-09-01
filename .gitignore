@@ -4,6 +4,17 @@ publish/
 probe_*.js
 probe_*.log
 probe_*.png
+_diag_*.js
+_diag_*.log
+_diag_*.png
 
 # e2e_quit.js 每次运行重新生成的截图
 _shot_*.png
+
+# 模拟器驱动目录：只保留 adbtool.js 工具脚本，截图和 dump 全部不入仓
+_emu/*.png
+_emu/*.xml
+_emu/*.log
+_emu/ev/
+_emu/E[0-9]*/
+_emu/[A-Z][A-Z]/

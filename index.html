@@ -8341,11 +8341,14 @@ function renderQuestion(){
     var inp = document.getElementById("fillInput");
     setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 60);
   } else {
+    // 打乱选项展示顺序，避免正确答案总是同一位置（出题意向常把正确项放第一项）
     var letters = ["A","B","C","D"];
-    q.o.forEach(function(opt, idx){
+    var order = shuffle([0,1,2,3].slice(0, q.o.length)); // 原始下标的一次随机排列
+    q._dc = order.indexOf(q.a);                           // 正确项落在展示顺序里的位置
+    order.forEach(function(oi, idx){
       var el = document.createElement("button");
       el.className = "option";
-      el.textContent = letters[idx]+". "+opt;
+      el.textContent = letters[idx]+". "+q.o[oi];
       el.onclick = function(){ answer(idx); };
       body.appendChild(el);
     });
@@ -8353,14 +8356,15 @@ function renderQuestion(){
 }
 function answer(idx){
   var q = quizQuestions[quizIndex];
+  var dc = (typeof q._dc === "number") ? q._dc : q.a; // 展示顺序里的正确位置
   var opts = document.querySelectorAll("#quizBody .option");
-  opts.forEach(function(el, i){ el.classList.add("disabled"); if(i===q.a) el.classList.add("correct"); });
-  if(idx === q.a){
+  opts.forEach(function(el, i){ el.classList.add("disabled"); if(i===dc) el.classList.add("correct"); });
+  if(idx === dc){
     quizCorrect++;
     showFeedback("✅ 答对了！", true);
   } else {
     opts[idx].classList.add("wrong");
-    showFeedback("❌ 答错了，正确答案是 "+(q.f===1?q.a:(["A","B","C","D"][q.a]+". "+q.o[q.a])), false);
+    showFeedback("❌ 答错了，正确答案是 "+("A,B,C,D".split(",")[dc]+". "+q.o[q.a]), false);
   }
   afterAnswer();
 }

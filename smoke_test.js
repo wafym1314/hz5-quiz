@@ -83,7 +83,9 @@ console.log('✓ 章节抽题 20 道正常');
 // T4 全对 → 3 朵花 + 打卡 + 记录
 for (let i=0;i<quizQuestions.length;i++){
   renderQuestion();
-  answer(quizQuestions[quizIndex].a);
+  var tq = quizQuestions[quizIndex];
+  if (tq.f === 1){ document.getElementById('fillInput').value = tq.a; submitFill(); }
+  else { answer(tq._dc); }
   if (quizIndex < quizQuestions.length-1) nextQuestion();
 }
 finishQuiz();
@@ -131,7 +133,7 @@ console.log('✓ 打卡日历渲染正常');
 state.review[k5yw] = false;
 startChapter('sx','sx-1');
 renderQuestion();
-const wrongIdx = (quizQuestions[0].a + 1) % quizQuestions[0].o.length;
+const wrongIdx = (quizQuestions[quizIndex]._dc + 1) % quizQuestions[quizIndex].o.length;
 answer(wrongIdx);
 assert(quizCorrect === 0, '答错不应加分');
 assert(els['quizFeedback'].classList.contains('wrong'), '应显示答错反馈');

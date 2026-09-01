@@ -105,6 +105,9 @@ if (want('--e2e')) {
   results.push(['test_refresh_e2e.js 换题端到端',
     run('test_refresh_e2e.js 换题端到端', ROOT, path.join(ROOT, 'test_refresh_e2e.js'),
         { env, timeout: 600000 })]);
+  results.push(['test_option_random_e2e.js 选项位置随机化',
+    run('test_option_random_e2e.js 选项位置随机化', ROOT, path.join(ROOT, 'test_option_random_e2e.js'),
+        { env, timeout: 600000 })]);
 }
 
 const bad = results.filter(r => !r[1]);
