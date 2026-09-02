@@ -4,7 +4,7 @@
  * 覆盖 2026-09-01 这轮改的三项（都是用户直接反馈的点）：
  *   1) 单元测试：章节页出现「📝 单元测试」入口，点进去能做题，
  *      题量 30 且全部落在该单元范围内，点「换一批」不会掉回单课。
- *   2) 年级页签顺序：5, 1, 2, 3, 4, 6（孩子读五年级，放第一个）。
+ *   2) 年级页签顺序：1, 2, 3, 4, 5, 6（符合人类习惯），默认仍选中五年级。
  *   3) 章节排序：数学/英语单元到两位数时按数字排，不再出现 1,10,11,2 这种
  *      字符串排序错乱。
  *   4) 不跑题：做某一课时，题目全部来自这一课，不掺别的课。
@@ -77,8 +77,8 @@ const inQuiz = (page) => page.evaluate(() => {
     /* ===== 1) 年级页签顺序 ===== */
     const grades = await page.evaluate(() =>
       Array.from(document.querySelectorAll('.grade-tab')).map(e => e.textContent.trim()));
-    chk('年级页签顺序为 5,1,2,3,4,6',
-        grades.join(',') === '5年级,1年级,2年级,3年级,4年级,6年级', grades.join(','));
+    chk('年级页签顺序为 1,2,3,4,5,6',
+        grades.join(',') === '1年级,2年级,3年级,4年级,5年级,6年级', grades.join(','));
 
     /* ===== 2) 默认落在五年级 ===== */
     const active = await page.evaluate(() => {
@@ -164,6 +164,37 @@ const inQuiz = (page) => page.evaluate(() => {
     await page.waitForTimeout(250);
     await clickText(page, '.subj-card', '语文');
     await page.waitForTimeout(250);
+
+    /* ===== 6.5) 单元测试必须插在本单元最后一课后面，而不是单独堆在顶部 =====
+       期望版式：第1,2,3课 →「📝 单元测试 · 第1单元」→ 第4,5,6课 →「第2单元」… */
+    const order = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C');
+      const up = ((window.YW_UNITS || {})['5上'] || []);
+      const dn = ((window.YW_UNITS || {})['5下'] || []);
+      const all = up.concat(dn);
+      const got = [];            // 相邻两个 U 之间有几课 = 该单元的课数
+      let c = 0, maxRun = 0;
+      seq.forEach(t => { if (t === 'C') { c++; if (c > maxRun) maxRun = c; } else { got.push(c); c = 0; } });
+      const want = all.slice();  // 期望 = YW_UNITS 里每个单元的课数
+      // 顺带记一下最后一课后面有没有收尾的单元测试
+      const tailUnit = seq.length > 0 && seq[seq.length - 1] === 'U';
+      const firstUnitName = (function () {
+        const u = document.querySelector('#chaptersBody .unit-item .unit-name');
+        return u ? u.textContent.trim() : '';
+      }());
+      return { seq: seq.join(''), got: got.join(','), want: want.join(','),
+               nU: got.length, nWant: want.length, tailUnit: tailUnit,
+               firstUnitName: firstUnitName };
+    });
+    chk('单元测试跟在每单元最后一课后面（1,2,3课→测试→4,5,6课…）',
+        order.got === order.want && order.nU === order.nWant && order.tailUnit,
+        '实际每单元课数 ' + order.got + ' / 期望 ' + order.want
+        + (order.tailUnit ? '' : '（最后一课后面缺少单元测试）'));
+    chk('开头 4 行是「3 课 + 单元测试」', order.seq.slice(0, 4) === 'CCCU',
+        order.seq.slice(0, 12));
+    chk('单元测试条目带单元号', /第1单元/.test(order.firstUnitName), order.firstUnitName);
 
     const ywOk = await page.evaluate(() => {
       const items = Array.from(document.querySelectorAll('.chapter-item'));

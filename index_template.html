@@ -122,7 +122,13 @@
     border-left:5px solid #e0a23c;
   }
   .unit-item:active { transform:scale(.98); }
+  .unit-main { display:flex; flex-direction:column; gap:3px; min-width:0; }
   .unit-name { font-size:16px; font-weight:700; }
+  /* 单元测试条目的副标题：语文列出本单元课文，其它科目列出章节名 */
+  .unit-sub {
+    font-size:12px; font-weight:600; color:#8a9a90;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
   /* 单元内的上下册小标题，比 part-label 弱一级 */
   .part-sub { font-size:13px; font-weight:800; color:#8a9a90; margin:8px 2px 4px 8px; }
   .chapter-name { font-size:16px; font-weight:700; }
@@ -320,11 +326,12 @@
 
 <script>
 /* ============ 年级 / 科目 定义 ============ */
-/* 年级页签顺序：孩子正在读五年级，排第一，打开就能练；
-   其余按 1→2→3→4→6 升序，六年级放最后。
+/* 年级页签顺序：按 1→2→3→4→5→6 升序，符合人类习惯。
+   孩子正在读五年级，所以 currentGrade 仍然默认选中 5（打开就能练），
+   只是页签不再把 5 排到最前面。
    注意 GRADES 只决定页签显示顺序，题库的 key 仍是 "<年级><科目>"，
    跟顺序无关，重排不会丢数据。 */
-var GRADES = ["5","1","2","3","4","6"];
+var GRADES = ["1","2","3","4","5","6"];
 var SUBJECTS = ["yw","sx","en","sci"];
 var SUB_META = {
   yw:  { name:"语文", icon:"语", cls:"yw",  desc:"统编版" },
@@ -635,20 +642,16 @@ function openSubject(sub){
   var reviewTip = state.review[k] ? '<div class="part-label" style="color:#b8860b;">🔁 复习模式：所有章节题目重新出现</div>' : "";
   var html = reviewTip;
 
-  /* ---- 单元测试：每个单元一条，覆盖该单元全部章节 ---- */
+  /* ---- 分课 / 分单元练习（一次 20 道），单元测试紧跟在本单元最后一课后面 ----
+     版式：第1、2、3课 →「📝 单元测试 · 第1单元」→ 第4、5、6课 →「📝 单元测试 · 第2单元」…
+     这样孩子顺着往下点就是「先学完一单元，再测一单元」。 */
   var units = buildUnits(k);
-  if(units.length > 0){
-    html += '<div class="part-label">📝 单元测试</div>';
-    var uHalf = null;
-    units.forEach(function(u){
-      if(u.half !== uHalf){ uHalf = u.half; html += '<div class="part-sub">'+(uHalf?"下册":"上册")+'</div>'; }
-      html += '<div class="unit-item" onclick="startUnitTest(\''+sub+'\','+u.idx+')">'
-        + '<div class="unit-name">'+u.label+'</div>'
-        + '<div class="chapter-badge badge-unit">'+u.total+' 题</div></div>';
-    });
-  }
+  // 单元挂到本单元最后一课的后面。buildUnits 的 codes 互不重叠，故一个章节最多挂一个单元
+  var unitAfter = {};
+  units.forEach(function(u){
+    if(u.codes.length) unitAfter[u.codes[u.codes.length - 1]] = u;
+  });
 
-  /* ---- 分课 / 分单元练习：一次 20 道 ---- */
   html += '<div class="part-label">📖 分'+(sub==="yw"?"课":"单元")+'练习</div>';
   var part = null;
   list.forEach(function(ch, idx){
@@ -664,6 +667,22 @@ function openSubject(sub){
     html += '<div class="chapter-item" onclick="startChapter(\''+sub+'\',\''+ch.c+'\')">'
       + '<div class="chapter-name">'+ch.ch+'</div>'
       + '<div class="chapter-badge '+cls+'">'+badge+'</div></div>';
+
+    /* 本单元最后一课之后，插一条单元测试 */
+    var u = unitAfter[ch.c];
+    if(!u) return;   // 不是单元末尾，继续下一课
+    var uName, uSub;
+    if(u.codes.length > 1){          // 语文：一单元含多课，副标题列出课文
+      uName = '📝 单元测试 · 第' + (u.u + 1) + '单元';
+      uSub  = u.sub || u.label;
+    }else{                            // 其余科目：一章 = 一单元，副标题就是章节名
+      uName = '📝 单元测试';
+      uSub  = u.label;
+    }
+    html += '<div class="unit-item" onclick="startUnitTest(\''+sub+'\','+u.idx+')">'
+      + '<div class="unit-main"><div class="unit-name">'+uName+'</div>'
+      + '<div class="unit-sub">'+uSub+'</div></div>'
+      + '<div class="chapter-badge badge-unit">'+u.total+' 题</div></div>';
   });
   document.getElementById("chaptersBody").innerHTML = html;
   showView("view-chapters");
