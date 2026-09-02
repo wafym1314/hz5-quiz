@@ -140,26 +140,33 @@ async function enterQuiz(page){
   console.log('\n=== C. 填空题空答案提示（uiAlert 单按钮）===');
   // 注意：从主页点科目卡片进的是「章节列表」，还要再点一个章节才到做题页。
   // 原来这里少点了那一层，C 段其实一次都没真正跑过（只是打印了"跳过"）。
-  await page.click('.subj-card.yw');
-  await page.waitForTimeout(500);
-  await page.click('#chaptersBody .chapter-item');
-  await page.waitForTimeout(500);
-  chk('重新进入了做题页', await page.isVisible('#view-quiz'));
-  // 抽到的 20 题里不一定有填空题（语文有的章节全是选择题）。以前遇到就直接跳过，
-  // 等于这条断言时灵时不灵 —— 改成主动「换一批」，最多试 6 次直到抽到填空题。
+  // 语文并非每个章节都有填空题（如第1课 桂花雨全是选择题），所以只刷当前章节
+  // 永远抽不到。改为：逐章节尝试，每个章节内「换一批」最多 6 次，直到抽到填空题。
   let moved = false;
-  for (let t = 0; t < 6 && !moved; t++) {
-    moved = await page.evaluate(() => {
-      const idx = quizQuestions.findIndex(q => q.f === 1);
-      if (idx >= 0) { quizIndex = idx; renderQuestion(); return true; }
-      return false;
-    });
-    if (!moved) {
-      await page.evaluate(() => refreshQuiz());
-      await page.waitForTimeout(250);
+  for (let ci = 0; ci < 25 && !moved; ci++) {
+    await page.click('.subj-card.yw');
+    await page.waitForTimeout(400);
+    const items = await page.$$('#chaptersBody .chapter-item');
+    if (ci >= items.length) break;
+    await items[ci].click();
+    await page.waitForTimeout(500);
+    for (let t = 0; t < 6 && !moved; t++) {
+      moved = await page.evaluate(() => {
+        const idx = quizQuestions.findIndex(q => q.f === 1);
+        if (idx >= 0) { quizIndex = idx; renderQuestion(); return true; }
+        return false;
+      });
+      if (!moved) { await page.evaluate(() => refreshQuiz()); await page.waitForTimeout(250); }
+    }
+    if (!moved) { // 回主页，准备试下一个章节
+      await page.click('[onclick="confirmQuit()"]');
+      await page.waitForTimeout(300);
+      const okBtn = await page.$('#uiDialogBtns .ui-btn:text("确定")');
+      if (okBtn) { await okBtn.click(); await page.waitForTimeout(300); }
     }
   }
-  chk('能在本科目抽到填空题（测试前提）', moved, '连续 6 批都没有填空题');
+  chk('重新进入了做题页', await page.isVisible('#view-quiz'));
+  chk('能在本科目抽到填空题（测试前提）', moved, '25 个章节均未抽到填空题');
   if (moved && await page.isVisible('#quizBody input')) {
     await page.click('#quizBody .btn');
     await page.waitForTimeout(500);

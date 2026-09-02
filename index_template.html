@@ -114,6 +114,17 @@
     box-shadow:0 2px 8px rgba(47,61,52,.05);
   }
   .chapter-item:active { transform:scale(.98); }
+  /* 单元测试条目：和分课练习区分开，左边加一道竖线方便电视端一眼分辨 */
+  .unit-item {
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff; border-radius:14px; padding:14px 16px; cursor:pointer;
+    box-shadow:0 2px 8px rgba(47,61,52,.05);
+    border-left:5px solid #e0a23c;
+  }
+  .unit-item:active { transform:scale(.98); }
+  .unit-name { font-size:16px; font-weight:700; }
+  /* 单元内的上下册小标题，比 part-label 弱一级 */
+  .part-sub { font-size:13px; font-weight:800; color:#8a9a90; margin:8px 2px 4px 8px; }
   .chapter-name { font-size:16px; font-weight:700; }
   .chapter-badge {
     font-size:13px; font-weight:700; padding:4px 10px; border-radius:999px; white-space:nowrap;
@@ -121,6 +132,7 @@
   .badge-new { background:#eef2ef; color:#7b8a80; }
   .badge-ing { background:#e8f1fb; color:#2f6fb8; }
   .badge-ok { background:#dff0e6; color:#2f7d5d; }
+  .badge-unit { background:#fdf1dd; color:#a9761f; }
 
   /* 做题页 */
   .quiz-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
@@ -308,7 +320,11 @@
 
 <script>
 /* ============ 年级 / 科目 定义 ============ */
-var GRADES = ["1","2","3","4","5","6"];
+/* 年级页签顺序：孩子正在读五年级，排第一，打开就能练；
+   其余按 1→2→3→4→6 升序，六年级放最后。
+   注意 GRADES 只决定页签显示顺序，题库的 key 仍是 "<年级><科目>"，
+   跟顺序无关，重排不会丢数据。 */
+var GRADES = ["5","1","2","3","4","6"];
 var SUBJECTS = ["yw","sx","en","sci"];
 var SUB_META = {
   yw:  { name:"语文", icon:"语", cls:"yw",  desc:"统编版" },
@@ -462,6 +478,21 @@ document.addEventListener("keydown", function(e){
 
 /* ============ 章节元数据 ============ */
 var CHAPTERS = {};
+
+/* 章节码排序：把 "yw-1" / "sx-12" 拆成 [前缀, 数字]，按数字大小比。
+   为什么必须自己排：题库里章节顺序取决于题目出现的先后，一旦某科
+   章节数上两位数，字符串比较就会把 "sx-10" 排到 "sx-2" 前面
+   （5 年级数学 15 章、英语 12 章都踩到过，界面上表现为单元顺序乱掉）。 */
+function chapterNum(code){
+  var m = /^(.*?)(\d+)$/.exec(String(code));
+  return m ? { pre:m[1], n:parseInt(m[2], 10) } : { pre:String(code), n:0 };
+}
+function chapterCmp(a, b){
+  var x = chapterNum(a), y = chapterNum(b);
+  if(x.pre !== y.pre) return x.pre < y.pre ? -1 : 1;
+  return x.n - y.n;
+}
+
 function rebuildChapters(){
   CHAPTERS = {};
   GRADES.forEach(function(g){ SUBJECTS.forEach(function(s){ CHAPTERS[key(g,s)] = []; }); });
@@ -471,6 +502,7 @@ function rebuildChapters(){
     QA[k].forEach(function(q){
       if(!seen[q.c]){ seen[q.c] = 1; CHAPTERS[k].push({ c:q.c, ch:q.ch }); }
     });
+    CHAPTERS[k].sort(function(p, q){ return chapterCmp(p.c, q.c); });
   });
 }
 rebuildChapters();
@@ -602,6 +634,22 @@ function openSubject(sub){
   }
   var reviewTip = state.review[k] ? '<div class="part-label" style="color:#b8860b;">🔁 复习模式：所有章节题目重新出现</div>' : "";
   var html = reviewTip;
+
+  /* ---- 单元测试：每个单元一条，覆盖该单元全部章节 ---- */
+  var units = buildUnits(k);
+  if(units.length > 0){
+    html += '<div class="part-label">📝 单元测试</div>';
+    var uHalf = null;
+    units.forEach(function(u){
+      if(u.half !== uHalf){ uHalf = u.half; html += '<div class="part-sub">'+(uHalf?"下册":"上册")+'</div>'; }
+      html += '<div class="unit-item" onclick="startUnitTest(\''+sub+'\','+u.idx+')">'
+        + '<div class="unit-name">'+u.label+'</div>'
+        + '<div class="chapter-badge badge-unit">'+u.total+' 题</div></div>';
+    });
+  }
+
+  /* ---- 分课 / 分单元练习：一次 20 道 ---- */
+  html += '<div class="part-label">📖 分'+(sub==="yw"?"课":"单元")+'练习</div>';
   var part = null;
   list.forEach(function(ch, idx){
     var isSecondHalf = (ch.ch.indexOf("下") >= 0);
@@ -628,25 +676,34 @@ var quizIndex = 0;
 var quizCorrect = 0;
 
 var CHAPTER_QUIZ_SIZE = 20;   // 每个章节每次练习的题量
+var UNIT_TEST_SIZE    = 30;   // 单元测试的题量（比单课练习多，覆盖整个单元）
 var HARD_MIN = 8;             // 每次练习至少包含的拔高题（d:2）道数，保证重点班难度
 
 /* ===== 抽题：每次进入都换一批，本章练完也不锁死 =====
    拆成 buildPool / applyHardMix 两步：
    - buildPool    只管「按优先级凑够题目」，不管难度配比；
    - applyHardMix 只管「保证拔高题占比」。
-   这样「换一批」按钮和进入章节能复用同一套规则，不会出现两处抽题逻辑不一致。 */
-function buildPool(k, c){
+   这样「换一批」按钮和进入章节能复用同一套规则，不会出现两处抽题逻辑不一致。
+
+   ★ 严格不跑题（2026-09-01 改）：以前本章新题不足 20 道时，会拿「同科其它
+   章节」的题来凑数，结果就是「明明在练第 1 课，突然冒出第 8 课的题」。
+   现在抽题范围由 opts.codes 锁定，不足时只用「本范围内做过的题」补，
+   本范围题数本来就不够 20 就少出几道 —— 宁可少，也不跑题。
+   单元测试走同一函数，只是把 codes 换成该单元下的所有章节码。 */
+function buildPool(k, c, opts){
+  opts = opts || {};
   var all = QA[k] || [];
   var done = doneArr(k);
   var review = !!state.review[k];        // 复习模式：所有题都当成「新题」
-  var SIZE = CHAPTER_QUIZ_SIZE;
-
+  var SIZE = opts.size || CHAPTER_QUIZ_SIZE;
+  // 抽题范围：默认锁死在传入的这一个章节；单元测试传整单元的章节码
+  var scope = (opts.codes && opts.codes.length) ? opts.codes : [c];
+  function inScope(q){ return scope.indexOf(q.c) >= 0; }
   function isFresh(q){ return review || done.indexOf(q.i) < 0; }
 
-  var chAll   = all.filter(function(q){ return q.c === c; });
-  var other   = all.filter(function(q){ return q.c !== c; });
-  var chFresh = shuffle(chAll.filter(isFresh));
-  var otFresh = shuffle(other.filter(isFresh));
+  var scAll   = all.filter(inScope);
+  var scFresh = shuffle(scAll.filter(isFresh));
+  var scOld   = shuffle(scAll.filter(function(q){ return !isFresh(q); }));
 
   var picked = [], used = {};
   function take(list, limit){
@@ -659,27 +716,16 @@ function buildPool(k, c){
     }
   }
 
-  if(chFresh.length > 0){
-    // 本章还有没做的题：先把本章练透。不足 20 道时依次用「本章做过的题 →
-    // 同科其它章节新题 → 同科其它章节做过的题」补足，保证不跑题。
-    take(chFresh);
-    take(shuffle(chAll.filter(function(q){ return !isFresh(q); })));
-    take(otFresh);
-    take(shuffle(other.filter(function(q){ return !isFresh(q); })));
-  } else {
-    // 本章已全部练完：不再弹「练完啦」把人锁死，改成「本章为主 + 同科其它章节」
-    // 的综合练习。保留约六成本章题，既换了新一批，又不至于跑题太远。
-    take(shuffle(chAll), Math.max(1, Math.round(SIZE * 0.6)));
-    take(otFresh);
-    take(shuffle(other.filter(function(q){ return !isFresh(q); })));
-  }
-  take(all);   // 兜底：题量极少的科目也要尽量凑满
+  take(scFresh);   // 先给本范围没做过的题
+  take(scOld);     // 新题不够，用本范围做过的题补（不跨范围）
+  take(scAll);     // 兜底：题号重复等极端情况下也要凑出一批
   return picked;
 }
 
 /* 拔高题配比：优先取 HARD_MIN 道 d:2 拔高题，其余用普通题补齐。
    1~3 年级没有拔高题（hard 为空），此时 nHard=0，全部取普通题 —— 属于正常降级。 */
-function applyHardMix(pool){
+function applyHardMix(pool, size){
+  var S = size || CHAPTER_QUIZ_SIZE;
   var hard = pool.filter(function(q){ return q.d === 2; });
   var norm = pool.filter(function(q){ return q.d !== 2; });
   shuffle(hard); shuffle(norm);
@@ -688,26 +734,35 @@ function applyHardMix(pool){
   // 多出来的会被白白丢掉，导致总题数凑不满 20（曾出过：只抽出 19 题）
   var rest = hard.slice(nHard).concat(norm);
   shuffle(rest);
-  return hard.slice(0, nHard).concat(rest.slice(0, Math.max(0, CHAPTER_QUIZ_SIZE - nHard)));
+  return hard.slice(0, nHard).concat(rest.slice(0, Math.max(0, S - nHard)));
 }
+
+/* 当前这一批题的抽题范围。
+   - 单课/单单元练习：codes = [该章节码]，size = CHAPTER_QUIZ_SIZE
+   - 单元测试：       codes = 该单元下所有章节码，size = UNIT_TEST_SIZE
+   「换一批」要沿用同一组 codes，否则一点换一批又会跑回单课范围。 */
+var currentCodes = null;
+var currentSize  = CHAPTER_QUIZ_SIZE;
 
 function startChapter(sub, c){
   currentSubject = sub;
   var k = key(currentGrade, sub);
   var all = QA[k] || [];
-  var pool = buildPool(k, c);
+  currentCodes = [c];
+  currentSize  = CHAPTER_QUIZ_SIZE;
+  var pool = buildPool(k, c, { codes: currentCodes, size: currentSize });
   if(pool.length === 0){ uiAlert("这个科目还没有题目哦～"); return; }
-  quizQuestions = applyHardMix(pool);
+  quizQuestions = applyHardMix(pool, currentSize);
   shuffle(quizQuestions);   // 打乱，避免拔高题全挤在前面
   currentChapter = c;
   quizIndex = 0;
   quizCorrect = 0;
   var chTotal = all.filter(function(q){ return q.c===c; }).length;
-  var chCount = quizQuestions.filter(function(q){ return q.c===c; }).length;
   var nHard   = quizQuestions.filter(function(q){ return q.d===2; }).length;
   var title = currentGrade+"年级 " + SUBJECT_NAMES[sub] + " · 练习";
-  if(chCount < CHAPTER_QUIZ_SIZE){
-    title += "（本章 "+chTotal+" 题，已补 "+(CHAPTER_QUIZ_SIZE-chCount)+" 道同科题目）";
+  // 本章题数不足 20 就少出几道（绝不用别的课的题凑数），这里如实说明
+  if(chTotal < CHAPTER_QUIZ_SIZE){
+    title += "（本章共 "+chTotal+" 题，全部练一遍）";
   }
   if(nHard > 0) title += " · 含 "+nHard+" 道拔高题";
   document.getElementById("quizSubjectTitle").textContent = title;
@@ -715,15 +770,95 @@ function startChapter(sub, c){
   renderQuestion();
 }
 
+/* ===== 单元测试 =====
+   单元测试 = 把整个单元的题合在一起测（30 道），区别于单课/单单元的 20 道练习。
+   数学 / 英语 / 科学：一个「章节」本身就是一个单元，单元测试会覆盖该单元全部题。
+   语文：五上五下是按「课」分的，一个单元含好几课，靠 YW_UNITS 把课归到单元；
+        其它年级语文的章节本身就是「第 N 单元」，一章即一单元。 */
+var YW_UNITS = {
+  // 每个数=该单元包含几课（按当前题库里的课文顺序切）
+  "5上": [3,4,3,4,2,3,3,3],   // 五上 2025新版 25 课 → 8 单元（桂花雨=第1课）
+  "5下": [4,4,4,2,3,3,3]      // 五下 23 课 → 7 个单元
+};
+
+function buildUnits(k){
+  var list = CHAPTERS[k] || [];
+  if(list.length === 0) return [];
+  var sub = k.replace(/^\d+/, "");
+  // 只有按「课」编排的语文需要合并成单元；其余科目一章 = 一单元
+  var needGroup = (sub === "yw") && YW_UNITS[currentGrade + "上"];
+  if(!needGroup){
+    return list.map(function(ch, i){
+      return { idx:i, label:ch.ch, codes:[ch.c], half:(ch.ch.indexOf("下")>=0) };
+    });
+  }
+  var units = [];
+  var half = null, cursor = 0, order = 0;
+  while(cursor < list.length){
+    var isDown = list[cursor].ch.indexOf("下") >= 0;
+    var sizes = isDown ? (YW_UNITS[currentGrade + "下"] || []) : (YW_UNITS[currentGrade + "上"] || []);
+    var u = (half === null || isDown !== half) ? 0 : (units.length ? units[units.length-1].u + 1 : 0);
+    half = isDown;
+    var size = sizes[u] || 1;
+    var slice = list.slice(cursor, cursor + size);
+    if(slice.length === 0) break;
+    var total = 0;
+    slice.forEach(function(ch){
+      total += (QA[k] || []).filter(function(q){ return q.c === ch.c; }).length;
+    });
+    var names = slice.map(function(ch){
+      var m = /第\s*\d+\s*课\s*(.+)$/.exec(ch.ch);
+      return m ? m[1] : ch.ch;
+    });
+    units.push({
+      idx: units.length,
+      u: u,
+      label: (isDown ? "五下·第" : "五上·第") + (u + 1) + "单元 " + names.join("、"),
+      sub: names.join("、"),
+      codes: slice.map(function(ch){ return ch.c; }),
+      total: total,
+      half: isDown
+    });
+    cursor += size;
+  }
+  return units;
+}
+
+function startUnitTest(sub, unitIdx){
+  currentSubject = sub;
+  var k = key(currentGrade, sub);
+  var units = buildUnits(k);
+  var u = units[unitIdx];
+  if(!u) return;
+  currentCodes = u.codes;
+  currentSize  = UNIT_TEST_SIZE;
+  var pool = buildPool(k, u.codes[0], { codes: currentCodes, size: currentSize });
+  if(pool.length === 0){ uiAlert("这个单元还没有题目哦～"); return; }
+  quizQuestions = applyHardMix(pool, currentSize);
+  shuffle(quizQuestions);
+  currentChapter = u.codes[0];
+  quizIndex = 0;
+  quizCorrect = 0;
+  var nHard = quizQuestions.filter(function(q){ return q.d===2; }).length;
+  document.getElementById("quizSubjectTitle").textContent =
+    currentGrade+"年级 " + SUBJECT_NAMES[sub] + " · 单元测试（共 "+quizQuestions.length+" 题）"
+    + (nHard > 0 ? " · 含 "+nHard+" 道拔高题" : "");
+  showView("view-quiz");
+  renderQuestion();
+}
+
 /* 「换一批」：重抽一批新题，回到第 1 题。
-   每次进入章节本身就会重抽一批，这个按钮是给「这批想换换口味」用的。 */
+   每次进入章节本身就会重抽一批，这个按钮是给「这批想换换口味」用的。
+   沿用 currentCodes / currentSize，保证单课练习换一批还是单课，
+   单元测试换一批还是整个单元。 */
 function refreshQuiz(){
   if(!currentSubject || !currentChapter) return;
   var prevIds = quizQuestions.map(function(q){ return q.i; }).join(",");
   var next = [];
+  var opts = { codes: currentCodes || [currentChapter], size: currentSize };
   // 极小概率抽到完全相同的一批，重试几次，保证「点了确实换了一批」
   for(var guard = 0; guard < 8; guard++){
-    next = applyHardMix(buildPool(key(currentGrade, currentSubject), currentChapter));
+    next = applyHardMix(buildPool(key(currentGrade, currentSubject), currentChapter, opts), currentSize);
     if(next.map(function(q){ return q.i; }).join(",") !== prevIds) break;
   }
   quizQuestions = next;

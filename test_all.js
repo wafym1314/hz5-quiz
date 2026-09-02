@@ -108,6 +108,11 @@ if (want('--e2e')) {
   results.push(['test_option_random_e2e.js 选项位置随机化',
     run('test_option_random_e2e.js 选项位置随机化', ROOT, path.join(ROOT, 'test_option_random_e2e.js'),
         { env, timeout: 600000 })]);
+  // 单元测试 / 年级顺序 / 章节排序 / 不跑题：2026-09-01 这轮新增。
+  // 依赖 A:/dev/hzquiz-tv/assets/index.html，跑 --e2e 前需要先跑过一次 --tv 生成它。
+  results.push(['test_unit_e2e.js 单元测试与排序',
+    run('test_unit_e2e.js 单元测试与排序', ROOT, path.join(ROOT, 'test_unit_e2e.js'),
+        { env, timeout: 600000 })]);
 }
 
 const bad = results.filter(r => !r[1]);

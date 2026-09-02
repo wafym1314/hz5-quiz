@@ -42,6 +42,8 @@ window.window = window;
 const EXPOSE = `
 window.__api = {
   startChapter: startChapter,
+  startUnitTest: startUnitTest,
+  buildUnits: buildUnits,
   refreshQuiz: refreshQuiz,
   restartChapter: restartChapter,
   getQuiz: function(){ return quizQuestions; },
@@ -50,7 +52,8 @@ window.__api = {
   doneArr: doneArr,
   QA: QA,
   key: key,
-  SIZE: CHAPTER_QUIZ_SIZE
+  SIZE: CHAPTER_QUIZ_SIZE,
+  UNIT_SIZE: UNIT_TEST_SIZE
 };
 `;
 
@@ -131,7 +134,79 @@ m2.forEach(q => api.doneArr(k5sx).push(q.i));
 api.startChapter('sx', chSx);
 const m3 = api.getQuiz().slice();
 chk('本章全部练完后第三次进入仍给 20 道', m3.length === 20);
-chk('第三次进入换成综合随机（含其它章节）', m3.filter(q => q.c !== chSx).length > 0);
+// 2026-09-01 行为变更：本章练完后不再掺别的章节。
+// 以前这里断言「第三次进入含其它章节」，实际使用中表现为
+// 「明明在练第 1 课，突然冒出第 8 课的题」，用户明确反馈过，已改成严格锁死本章。
+chk('第三次进入仍全部来自本章（不再掺其它章节）',
+    m3.every(q => q.c === chSx),
+    '本章 ' + m3.filter(q => q.c === chSx).length + ' / ' + m3.length);
+
+// ---- 5b) 单元测试：跨该单元所有章节，且绝不超出单元范围 ----
+console.log('');
+console.log('=== 单元测试 ===');
+api.setGrade('5');
+const units5yw = api.buildUnits('5yw');
+chk('五年级语文能算出 15 个单元（五上 8 + 五下 7）', units5yw.length === 15, '实际 ' + units5yw.length);
+if (units5yw.length) {
+  const u0 = units5yw[0];
+  chk('第 1 单元含多课的题', u0.codes.length >= 2 && u0.total > 0,
+      u0.codes.length + ' 课 / ' + u0.total + ' 题');
+  api.startUnitTest('yw', 0);
+  const ut = api.getQuiz().slice();
+  chk('单元测试能抽出题目', ut.length > 0, '实际 ' + ut.length + ' 道');
+  chk('单元测试题量比单课练习多（30 vs 20）', ut.length === 30, '实际 ' + ut.length);
+  chk('单元测试全部落在该单元的章节范围内',
+      ut.every(q => u0.codes.indexOf(q.c) >= 0),
+      '越界 ' + ut.filter(q => u0.codes.indexOf(q.c) < 0).length + ' 道');
+}
+// 单元测试「换一批」必须仍留在单元范围内，不能掉回单课
+if (units5yw.length) {
+  const u0 = units5yw[0];
+  api.startUnitTest('yw', 0);
+  api.refreshQuiz();
+  const ut2 = api.getQuiz().slice();
+  chk('单元测试点「换一批」后仍在整个单元内',
+      ut2.every(q => u0.codes.indexOf(q.c) >= 0),
+      '越界 ' + ut2.filter(q => u0.codes.indexOf(q.c) < 0).length + ' 道');
+}
+// 数学：一章即一单元，单元测试应覆盖该单元（题量可能少于 30 就全出）
+api.setGrade('5');
+const units5sx = api.buildUnits('5sx');
+chk('五年级数学按单元划分', units5sx.length === 15, '实际 ' + units5sx.length);
+if (units5sx.length) {
+  const u = units5sx[0];
+  api.startUnitTest('sx', 0);
+  const ut = api.getQuiz().slice();
+  chk('数学单元测试只出该单元的题', ut.every(q => q.c === u.codes[0]),
+      '越界 ' + ut.filter(q => q.c !== u.codes[0]).length + ' 道');
+}
+// 其余年级数学（北师版）单元数硬性锁定：一旦被重新注入人教版或拆分错误，立即失败
+const MATH_UNITS = {'1':14,'2':17,'3':15,'4':14,'6':11};
+['1','2','3','4','6'].forEach(g => {
+  api.setGrade(g);
+  const us = api.buildUnits(g + 'sx');
+  chk(g + '年级数学按单元划分(北师版)', us.length === MATH_UNITS[g], '实际 ' + us.length);
+});
+// 全科目：单元测试不能崩、不能越界
+let ubad = [];
+['1','2','3','4','5','6'].forEach(g => {
+  ['yw','sx','en','sci'].forEach(s => {
+    const k = api.key(g, s);
+    api.setGrade(g);
+    const us = api.buildUnits(k);
+    if (!us.length) return;
+    us.forEach((u, i) => {
+      try {
+        api.startUnitTest(s, i);
+        api.getQuiz().forEach(q => {
+          if (u.codes.indexOf(q.c) < 0) ubad.push(g + s + '单元' + i + '越界');
+        });
+      } catch(e) { ubad.push(g + s + '单元' + i + ' 异常:' + e.message); }
+    });
+  });
+});
+chk('全年级×全科目：单元测试不越界、不崩溃', ubad.length === 0,
+    ubad.length ? ubad.slice(0, 5).join(' ') : '');
 
 // ---- 6) 全年级×全科目回归：必须凑满 20 道、且不崩 ----
 console.log('');
