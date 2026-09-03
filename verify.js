@@ -8,8 +8,13 @@ global.QA = { yw:[], sx:[], en:[] };
   eval(fs.readFileSync(path + '/bank/' + f + '.js', 'utf8'));
 });
 const NEW_DIR = path + '/bank/new';
+// ★ 必须排除 *_backup.js：那是改北师版时留的人教版旧文件备份，不是正式题库。
+//   以前用 readdirSync 无脑全加载，8 个备份文件被当成正式题库 eval 进去，
+//   结果 1-6 年级数学变成「北师版 + 人教版」两套混在一起，五年级最明显
+//   （北师版第1单元「小数除法」被人教版「小数乘法」盖掉）。
+const isBankFile = f => f.endsWith('.js') && !/_backup\.js$/.test(f);
 if (fs.existsSync(NEW_DIR)) {
-  fs.readdirSync(NEW_DIR).filter(f => f.endsWith('.js')).forEach(f => {
+  fs.readdirSync(NEW_DIR).filter(isBankFile).forEach(f => {
     eval(fs.readFileSync(NEW_DIR + '/' + f, 'utf8'));
   });
 }
@@ -82,7 +87,7 @@ let bankSrc = '';
 global.QA = { yw:[], sx:[], en:[] };
 ['yw1','yw2','yw3','yw4','yw5','sx','en1','en2','en3'].forEach(f => { bankSrc += fs.readFileSync(path + '/bank/' + f + '.js', 'utf8') + '\n'; });
 if (fs.existsSync(NEW_DIR)) {
-  fs.readdirSync(NEW_DIR).filter(f => f.endsWith('.js')).forEach(f => { bankSrc += fs.readFileSync(NEW_DIR + '/' + f, 'utf8') + '\n'; });
+  fs.readdirSync(NEW_DIR).filter(isBankFile).forEach(f => { bankSrc += fs.readFileSync(NEW_DIR + '/' + f, 'utf8') + '\n'; });
 }
 if (tpl.indexOf('/*__IMGS__*/') < 0) { console.error('模板中找不到配图占位符 /*__IMGS__*/'); process.exit(1); }
 const out = tpl.replace('/*__IMGS__*/', imgSrc).replace('/*__BANK__*/', bankSrc);

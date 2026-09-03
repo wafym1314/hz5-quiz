@@ -655,8 +655,12 @@ function openSubject(sub){
   html += '<div class="part-label">📖 分'+(sub==="yw"?"课":"单元")+'练习</div>';
   var part = null;
   list.forEach(function(ch, idx){
-    var isSecondHalf = (ch.ch.indexOf("下") >= 0);
-    var pLabel = isSecondHalf ? "下册" : "上册";
+    /* 上下册标记只认章节名里的「上 / 下」字。
+       以前写成「没有下字就算上册」，害得「一年级·古诗积累」这类不带册别标记的
+       章节紧跟在下册后面又刷出一个「上册」标题 —— 1yw / 1sci / 2yw / 3yw /
+       4yw / 5sci 六个科目都中过招。现在没有标记的一律归「综合练习」。 */
+    var pLabel = ch.ch.indexOf("下") >= 0 ? "下册"
+               : (ch.ch.indexOf("上") >= 0 ? "上册" : "综合练习");
     if(pLabel !== part){ part = pLabel; html += '<div class="part-label">'+pLabel+'</div>'; }
     var all = QA[k].filter(function(q){ return q.c===ch.c; });
     var doneCount = all.filter(function(q){ return doneArr(k).indexOf(q.i)>=0; }).length;
@@ -668,17 +672,15 @@ function openSubject(sub){
       + '<div class="chapter-name">'+ch.ch+'</div>'
       + '<div class="chapter-badge '+cls+'">'+badge+'</div></div>';
 
-    /* 本单元最后一课之后，插一条单元测试 */
+    /* 本单元最后一课之后，插一条单元测试。
+       ★ 只给「跨多课」的单元插（u.codes.length > 1）。一章就是一个单元时，
+       单元测试的抽题范围和上面单章练习完全相同，点进去一字不差，纯属重复入口
+       —— 1 年级 + 6 年级曾有 62 条这样的假单元测试。只有语文按课编排、一个
+       单元含好几课时，跨课综合才有意义（5 年级语文就是这么做的）。 */
     var u = unitAfter[ch.c];
-    if(!u) return;   // 不是单元末尾，继续下一课
-    var uName, uSub;
-    if(u.codes.length > 1){          // 语文：一单元含多课，副标题列出课文
-      uName = '📝 单元测试 · 第' + (u.u + 1) + '单元';
-      uSub  = u.sub || u.label;
-    }else{                            // 其余科目：一章 = 一单元，副标题就是章节名
-      uName = '📝 单元测试';
-      uSub  = u.label;
-    }
+    if(!u || u.codes.length <= 1) return;   // 不是跨课单元的末尾，继续下一课
+    var uName = '📝 单元测试 · 第' + (u.u + 1) + '单元';
+    var uSub  = u.sub || u.label;
     html += '<div class="unit-item" onclick="startUnitTest(\''+sub+'\','+u.idx+')">'
       + '<div class="unit-main"><div class="unit-name">'+uName+'</div>'
       + '<div class="unit-sub">'+uSub+'</div></div>'

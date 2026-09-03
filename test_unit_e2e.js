@@ -60,6 +60,34 @@ const inQuiz = (page) => page.evaluate(() => {
   return !!v && v.className.indexOf('hidden') < 0;
 });
 
+// 退回主页。做题页会先弹「确定要退出吗」的自绘弹窗，所以点完返回要点掉确定，
+// 再点一次返回才真正回到主页。章节页则一次返回就够。
+async function backHome(page) {
+  for (let i = 0; i < 3; i++) {
+    const atHome = await page.evaluate(() => {
+      const v = document.getElementById('view-home');
+      return !!v && v.className.indexOf('hidden') < 0;
+    });
+    if (atHome) return true;
+    await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('.back-btn'));
+      const b = btns.find(x => (x.textContent || '').indexOf('返回') >= 0) || btns[0];
+      if (b) b.click();
+    });
+    await page.waitForTimeout(220);
+    await page.evaluate(() => {
+      const ok = Array.from(document.querySelectorAll('.ui-btn'))
+        .find(b => (b.textContent || '').indexOf('确定') >= 0);
+      if (ok) ok.click();
+    });
+    await page.waitForTimeout(220);
+  }
+  return page.evaluate(() => {
+    const v = document.getElementById('view-home');
+    return !!v && v.className.indexOf('hidden') < 0;
+  });
+}
+
 /* ---------- 主流程 ---------- */
 (async () => {
   for (const key of list) {
@@ -106,9 +134,21 @@ const inQuiz = (page) => page.evaluate(() => {
     chk('数学单元号按数字升序（不再是 1,10,11,2）', sorted && pairs.length >= 15,
         pairs.map(p => (p.down ? '下' : '上') + p.n).join(','));
 
-    /* ===== 4) 单元测试入口存在且可进入 ===== */
+    /* ===== 4) 数学不该出现冗余的单元测试入口 =====
+       数学一章 = 一单元，单元测试的抽题范围和上面单章练习完全相同，
+       点进去一字不差，纯属重复入口（1+6 年级曾有 62 条）。现在只在
+       「一个单元跨多课」时才插单元测试，数学/英语/科学都不该有。 */
+    const sxUnit = await page.evaluate(() => document.querySelectorAll('.unit-item').length);
+    chk('数学不出现冗余单元测试（一章=一单元，测的和单章练习一样）',
+        sxUnit === 0, sxUnit + ' 个冗余入口');
+
+    /* ===== 5) 回主页 → 语文（唯一按课编排、有跨课单元的科目） ===== */
+    chk('能从数学章节页退回主页', await backHome(page));
+    await clickText(page, '.subj-card', '语文');
+    await page.waitForTimeout(250);
+
     const unitCount = await page.evaluate(() => document.querySelectorAll('.unit-item').length);
-    chk('章节页出现「单元测试」入口', unitCount >= 15, unitCount + ' 个单元');
+    chk('语文出现「单元测试」入口', unitCount >= 8, unitCount + ' 个单元');
 
     await page.evaluate(() => document.querySelector('.unit-item').click());
     await page.waitForTimeout(300);
@@ -143,27 +183,12 @@ const inQuiz = (page) => page.evaluate(() => {
         u1.codes.length === 1 ? after.codes.length === 1 : after.codes.length >= 1,
         '原 ' + u1.codes.join(',') + ' → 新 ' + after.codes.join(','));
 
-    /* ===== 6) 退出 → 语文：做第 1 课不跑题 ===== */
-    await page.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('.back-btn'));
-      const b = btns[0]; if (b) b.click();
-    });
-    await page.waitForTimeout(200);
-    await page.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('.ui-btn'));
-      const ok = btns.find(b => (b.textContent || '').indexOf('确定') >= 0);
-      if (ok) ok.click();
-    });
-    await page.waitForTimeout(250);
-
-    await page.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('.back-btn'));
-      const b = btns.find(x => (x.textContent || '').indexOf('返回') >= 0);
-      if (b) b.click();
-    });
-    await page.waitForTimeout(250);
+    /* ===== 6) 退出单元测试 → 回到语文章节页（后面还要在章节页查排版顺序） ===== */
+    // 注意：做题页点「← 退出」+ 确定后回的是【主页】，不是章节页（实测）。
+    // 所以退出后要重新点一次语文卡片才回到语文章节页。
+    chk('能从单元测试退回主页', await backHome(page));
     await clickText(page, '.subj-card', '语文');
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(300);
 
     /* ===== 6.5) 单元测试必须插在本单元最后一课后面，而不是单独堆在顶部 =====
        期望版式：第1,2,3课 →「📝 单元测试 · 第1单元」→ 第4,5,6课 →「第2单元」… */

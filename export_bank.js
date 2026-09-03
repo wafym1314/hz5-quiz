@@ -12,8 +12,13 @@ global.QA = { yw:[], sx:[], en:[] };
 
 // 2) 新年级/科目文件：自行初始化并 push 到嵌套键（如 QA["1yw"]）
 const NEW_FILES = [];
+// ★ 必须排除 *_backup.js：那是改北师版时留的人教版旧文件备份，不是正式题库。
+//   以前无脑全加载，8 个备份文件被当正式题库 eval 进去，1-6 年级数学变成
+//   「北师版 + 人教版」两套混在一起，导出的 questions.json 也是脏的。
 if (fs.existsSync(path + '/bank/new')) {
-  fs.readdirSync(path + '/bank/new').forEach(f => { if (f.endsWith('.js')) NEW_FILES.push('new/' + f); });
+  fs.readdirSync(path + '/bank/new')
+    .filter(f => f.endsWith('.js') && !/_backup\.js$/.test(f))
+    .forEach(f => NEW_FILES.push('new/' + f));
 }
 NEW_FILES.forEach(f => {
   const src = fs.readFileSync(path + '/bank/' + f, 'utf8');
