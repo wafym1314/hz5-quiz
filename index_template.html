@@ -676,12 +676,14 @@ function openSubject(sub){
       + '<div class="chapter-badge '+cls+'">'+badge+'</div></div>';
 
     /* 本单元最后一课之后，插一条单元测试。
-       ★ 只给「跨多课」的单元插（u.codes.length > 1）。一章就是一个单元时，
-       单元测试的抽题范围和上面单章练习完全相同，点进去一字不差，纯属重复入口
-       —— 1 年级 + 6 年级曾有 62 条这样的假单元测试。只有语文按课编排、一个
-       单元含好几课时，跨课综合才有意义（5 年级语文就是这么做的）。 */
+       语文（按课编排）：只在「跨多课」的单元后面插，避免重复入口。
+       数学 / 英语：每章即一单元，每章后面都插一条单元测试
+       （五上 U1→测→U2→测…，五上第1单元→测→第2单元→测…），
+       这样和语文一样「先学完一单元，再测一单元」。
+       科学不改：一章=一单元时单元测试和单章练习抽题范围完全一致，纯属重复入口。 */
     var u = unitAfter[ch.c];
-    if(!u || u.codes.length <= 1) return;   // 不是跨课单元的末尾，继续下一课
+    if(!u) return;   // 本单元还有后续课，继续往下排
+    if(sub !== "sx" && sub !== "en" && u.codes.length <= 1) return;
     var uName = '📝 单元测试 · 第' + (u.u + 1) + '单元';
     var uSub  = u.sub || u.label;
     html += '<div class="unit-item" onclick="startUnitTest(\''+sub+'\','+u.idx+')">'
@@ -812,8 +814,16 @@ function buildUnits(k){
   // 只有按「课」编排的语文需要合并成单元；其余科目一章 = 一单元
   var needGroup = (sub === "yw") && YW_UNITS[currentGrade + "上"];
   if(!needGroup){
+    // 数学 / 英语 / 科学：一章即一单元。单元编号按「上册 / 下册」分别递增，
+    // 下册出现后从 1 重新计（五上 Unit1-6 → 五下 Unit1-6；五上第1-7单元 → 五下第1-8单元）。
+    var up = 0, dn = 0;
     return list.map(function(ch, i){
-      return { idx:i, label:ch.ch, codes:[ch.c], half:(ch.ch.indexOf("下")>=0) };
+      var isDown = ch.ch.indexOf("下") >= 0;
+      var u = isDown ? ++dn : ++up;
+      var total = (QA[k] || []).filter(function(q){ return q.c === ch.c; }).length;
+      // 副标题只留「主题」，去掉前缀「五上·」和「第N单元 」
+      var sub = ch.ch.replace(/^.*?·\s*/, "").replace(/^第\d+单元\s*/, "");
+      return { idx:i, u:u-1, label:ch.ch, sub:sub, codes:[ch.c], half:isDown, total:total };
     });
   }
   var units = [];

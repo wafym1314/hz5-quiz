@@ -134,16 +134,72 @@ async function backHome(page) {
     chk('数学单元号按数字升序（不再是 1,10,11,2）', sorted && pairs.length >= 15,
         pairs.map(p => (p.down ? '下' : '上') + p.n).join(','));
 
-    /* ===== 4) 数学不该出现冗余的单元测试入口 =====
-       数学一章 = 一单元，单元测试的抽题范围和上面单章练习完全相同，
-       点进去一字不差，纯属重复入口（1+6 年级曾有 62 条）。现在只在
-       「一个单元跨多课」时才插单元测试，数学/英语/科学都不该有。 */
-    const sxUnit = await page.evaluate(() => document.querySelectorAll('.unit-item').length);
-    chk('数学不出现冗余单元测试（一章=一单元，测的和单章练习一样）',
-        sxUnit === 0, sxUnit + ' 个冗余入口');
+    /* ===== 4) 数学每章后都应有单元测试（参照语文「学完一单元测一单元」） =====
+       数学北师版一章=一单元，单元测试紧跟在该章后面：C U C U …（15 章 → 15 个测试）。
+       副标题「小数除法」同时印证数学已是北师版（人教版同单元会是「小数乘法」）。 */
+    const sxOrder = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C');
+      const firstName = (function () {
+        const u = document.querySelector('#chaptersBody .unit-item .unit-name');
+        return u ? u.textContent.trim() : ''; })();
+      const firstSub = (function () {
+        const u = document.querySelector('#chaptersBody .unit-item .unit-sub');
+        return u ? u.textContent.trim() : ''; })();
+      return { seq: seq.join(''), nU: seq.filter(x => x === 'U').length,
+               nC: seq.filter(x => x === 'C').length, firstName, firstSub };
+    });
+    chk('数学单元测试紧跟每章后面（C U C U… 交替）',
+        /^CU(CU)*$/.test(sxOrder.seq) && sxOrder.nC === sxOrder.nU,
+        sxOrder.seq.slice(0, 30) + (sxOrder.seq.length > 30 ? '…' : ''));
+    chk('数学单元测试数量 = 章节数（每章一个）',
+        sxOrder.nU === sxOrder.nC && sxOrder.nU >= 7,
+        sxOrder.nU + ' 个单元测试 / ' + sxOrder.nC + ' 章');
+    chk('数学单元测试带「第1单元」编号', /第1单元/.test(sxOrder.firstName), sxOrder.firstName);
+    chk('数学单元测试副标题是单元主题（小数除法=北师版已生效）',
+        sxOrder.firstSub === '小数除法', sxOrder.firstSub);
 
-    /* ===== 5) 回主页 → 语文（唯一按课编排、有跨课单元的科目） ===== */
-    chk('能从数学章节页退回主页', await backHome(page));
+    /* 点数学第一个单元测试，确认真的是单元测试（30 题、单单元、标题标明） */
+    await page.evaluate(() => document.querySelector('#chaptersBody .unit-item').click());
+    await page.waitForTimeout(300);
+    const mx = await page.evaluate(() => ({
+      inQuiz: (() => { const v = document.getElementById('view-quiz'); return !!v && v.className.indexOf('hidden') < 0; })(),
+      n: (window.quizQuestions || []).length,
+      codes: Array.from(new Set((window.quizQuestions || []).map(q => q.c))),
+      title: (document.getElementById('quizSubjectTitle') || {}).textContent || '',
+    }));
+    chk('点数学单元测试能进入做题页', mx.inQuiz);
+    chk('数学单元测试题量为 30', mx.n === 30, '实际 ' + mx.n);
+    chk('数学单元测试覆盖本单元全部题（单单元）', mx.codes.length === 1, mx.codes.join(','));
+    chk('标题标明是单元测试', mx.title.indexOf('单元测试') >= 0, mx.title);
+    chk('能从数学单元测试退回主页', await backHome(page));
+
+    /* ===== 5) 英语同样每章后跟单元测试 ===== */
+    await clickText(page, '.subj-card', '英语');
+    await page.waitForTimeout(250);
+    const enOrder = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C');
+      const firstName = (function () {
+        const u = document.querySelector('#chaptersBody .unit-item .unit-name');
+        return u ? u.textContent.trim() : ''; })();
+      const firstSub = (function () {
+        const u = document.querySelector('#chaptersBody .unit-item .unit-sub');
+        return u ? u.textContent.trim() : ''; })();
+      return { seq: seq.join(''), nU: seq.filter(x => x === 'U').length,
+               nC: seq.filter(x => x === 'C').length, firstName, firstSub };
+    });
+    chk('英语单元测试紧跟每章后面（C U C U… 交替）',
+        /^CU(CU)*$/.test(enOrder.seq) && enOrder.nC === enOrder.nU,
+        enOrder.seq.slice(0, 30) + (enOrder.seq.length > 30 ? '…' : ''));
+    chk('英语单元测试带「第1单元」编号', /第1单元/.test(enOrder.firstName), enOrder.firstName);
+    chk('英语单元测试副标题是单元主题（Unit 1 …）',
+        /^Unit 1 /i.test(enOrder.firstSub), enOrder.firstSub);
+    chk('能从英语章节页退回主页', await backHome(page));
+
+    /* ===== 6) 回主页 → 语文（唯一按课编排、有跨课单元的科目） ===== */
     await clickText(page, '.subj-card', '语文');
     await page.waitForTimeout(250);
 
@@ -239,6 +295,14 @@ async function backHome(page) {
     chk('语文第 1 课能进入做题页', cp.inQuiz);
     chk('做第 1 课时全部是本课的题（不掺其它课）',
         cp.codes.length === 1, '涉及章节 ' + cp.codes.join(',') + ' / ' + cp.n + ' 道');
+
+    /* ===== 7) 科学保持不插单元测试（避免与单章练习重复的入口） ===== */
+    chk('能从语文做题页退回主页', await backHome(page));
+    await clickText(page, '.subj-card', '科学');
+    await page.waitForTimeout(250);
+    const sciU = await page.evaluate(() => document.querySelectorAll('.unit-item').length);
+    chk('科学不出现单元测试入口（与单章练习重复，刻意保持隐藏）', sciU === 0, sciU + ' 个');
+    chk('能从科学章节页退回主页', await backHome(page));
 
     chk('全程无 JS 报错', errors.length === 0, errors.slice(0, 3).join(' | '));
 
