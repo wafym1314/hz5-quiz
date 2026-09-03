@@ -195,8 +195,8 @@ async function backHome(page) {
         /^CU(CU)*$/.test(enOrder.seq) && enOrder.nC === enOrder.nU,
         enOrder.seq.slice(0, 30) + (enOrder.seq.length > 30 ? '…' : ''));
     chk('英语单元测试带「第1单元」编号', /第1单元/.test(enOrder.firstName), enOrder.firstName);
-    chk('英语单元测试副标题是单元主题（Unit 1 …）',
-        /^Unit 1 /i.test(enOrder.firstSub), enOrder.firstSub);
+    chk('英语单元测试副标题是单元主题（Unit N 编号已剥掉）',
+        enOrder.firstSub === "What's he like?", enOrder.firstSub);
     chk('能从英语章节页退回主页', await backHome(page));
 
     /* ===== 6) 回主页 → 语文（唯一按课编排、有跨课单元的科目） ===== */
@@ -303,6 +303,47 @@ async function backHome(page) {
     const sciU = await page.evaluate(() => document.querySelectorAll('.unit-item').length);
     chk('科学不出现单元测试入口（与单章练习重复，刻意保持隐藏）', sciU === 0, sciU + ' 个');
     chk('能从科学章节页退回主页', await backHome(page));
+
+    /* ===== 8) 一年级：同样每章后跟单元测试，且单元号跟章节名一致 =====
+       一年级英语单元号 1-8 连续编（一下从 Unit 6 起，不是 Unit 1），
+       按册重置计数会把它错标成「第1单元」—— 这里专门守住这个坑。 */
+    await clickText(page, '.grade-tab', '1年级');
+    await page.waitForTimeout(250);
+    await clickText(page, '.subj-card', '英语');
+    await page.waitForTimeout(250);
+    const g1en = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const names = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-name'))
+        .map(e => e.textContent.trim());
+      return { seq, names };
+    });
+    chk('一年级英语单元测试紧跟每章后面（C U 交替，共 8 组）',
+        /^CU(CU)*$/.test(g1en.seq) && g1en.names.length === 8,
+        g1en.seq + ' / ' + g1en.names.length + ' 个');
+    chk('一年级英语「一下·Unit 6」标为「第6单元」（单元号连续，不按册重置）',
+        /第6单元/.test(g1en.names[5] || ''), g1en.names.join(' / '));
+    chk('一年级英语「一下·Unit 8」标为「第8单元」',
+        /第8单元/.test(g1en.names[7] || ''), '');
+    chk('能从一年级英语章节页退回主页', await backHome(page));
+
+    await clickText(page, '.subj-card', '数学');
+    await page.waitForTimeout(250);
+    const g1sx = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const firstSub = (function () {
+        const u = document.querySelector('#chaptersBody .unit-item .unit-sub');
+        return u ? u.textContent.trim() : ''; })();
+      return { seq, firstSub };
+    });
+    chk('一年级数学单元测试紧跟每章后面（C U 交替，共 14 组）',
+        /^CU(CU)*$/.test(g1sx.seq), g1sx.seq);
+    chk('一年级数学首个单元测试副标题是「生活中的数」（北师版一上第1单元）',
+        g1sx.firstSub === '生活中的数', g1sx.firstSub);
+    chk('能从一年级数学章节页退回主页', await backHome(page));
 
     chk('全程无 JS 报错', errors.length === 0, errors.slice(0, 3).join(' | '));
 

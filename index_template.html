@@ -503,6 +503,32 @@ function chapterCmp(a, b){
   return x.n - y.n;
 }
 
+/* 从章节名里提取单元号（没有则返回 0）。
+   为什么必须从名字取而不能按上/下册分别递增：各年级编排不一致 ——
+   一/二年级英语单元号 1-10 连续编（一下从 Unit 6 起，不是 Unit 1），
+   四/六年级英语跳号（四下没有第4单元）。按册重置计数会把
+   「一下·Unit 6」错标成「📝 单元测试 · 第1单元」。 */
+function unitNumFromName(name){
+  var m = /第\s*(\d+)(?:\s*[-–—~到至]\s*\d+)?\s*单元/.exec(name);   // 第3单元 / 第7-8单元
+  if(m) return parseInt(m[1], 10);
+  m = /Unit\s*(\d+)/i.exec(name);                                    // Unit 6
+  if(m) return parseInt(m[1], 10);
+  var cn = { "一":1, "二":2, "三":3, "四":4, "五":5, "六":6, "七":7, "八":8, "九":9 };
+  m = /第\s*([一二三四五六七八九十]+)\s*单元/.exec(name);            // 第一单元（科学用中文数字）
+  if(m){
+    var s = m[1], n = 0;
+    if(s === "十") n = 10;
+    else if(s.indexOf("十") === 0) n = 10 + (cn[s.charAt(1)] || 0);   // 十X
+    else if(s.indexOf("十") > 0){                                      // X十 / X十Y
+      var p = s.split("十");
+      n = (cn[p[0]] || 0) * 10 + (cn[p[1]] || 0);
+    }
+    else n = cn[s] || 0;
+    return n;
+  }
+  return 0;
+}
+
 function rebuildChapters(){
   CHAPTERS = {};
   GRADES.forEach(function(g){ SUBJECTS.forEach(function(s){ CHAPTERS[key(g,s)] = []; }); });
@@ -814,15 +840,20 @@ function buildUnits(k){
   // 只有按「课」编排的语文需要合并成单元；其余科目一章 = 一单元
   var needGroup = (sub === "yw") && YW_UNITS[currentGrade + "上"];
   if(!needGroup){
-    // 数学 / 英语 / 科学：一章即一单元。单元编号按「上册 / 下册」分别递增，
-    // 下册出现后从 1 重新计（五上 Unit1-6 → 五下 Unit1-6；五上第1-7单元 → 五下第1-8单元）。
+    // 数学 / 英语 / 科学：一章即一单元。
+    // 单元号优先从章节名里取（「第3单元」「Unit 6」「第一单元」），取不到再按上/下册递增兜底。
+    // 不能只按册递增：一/二年级英语 1-10 连续编（一下从 Unit 6 起）、四/六年级英语跳号，
+    // 按册重置会把「一下·Unit 6」错标成「第1单元」。
     var up = 0, dn = 0;
     return list.map(function(ch, i){
       var isDown = ch.ch.indexOf("下") >= 0;
-      var u = isDown ? ++dn : ++up;
+      var named = unitNumFromName(ch.ch);          // 0 = 章节名里没有单元号
+      var u = named || (isDown ? ++dn : ++up);     // 1-based
       var total = (QA[k] || []).filter(function(q){ return q.c === ch.c; }).length;
-      // 副标题只留「主题」，去掉前缀「五上·」和「第N单元 」
-      var sub = ch.ch.replace(/^.*?·\s*/, "").replace(/^第\d+单元\s*/, "");
+      // 副标题只留「主题」：去掉「一上·」前缀和「第N单元 / Unit N」编号
+      var sub = ch.ch.replace(/^.*?·\s*/, "")
+                     .replace(/^第[\d一二三四五六七八九十]+(?:\s*[-–—~到至]\s*\d+)?\s*单元\s*/i, "")
+                     .replace(/^Unit\s*\d+\s*/i, "");
       return { idx:i, u:u-1, label:ch.ch, sub:sub, codes:[ch.c], half:isDown, total:total };
     });
   }
