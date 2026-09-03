@@ -345,6 +345,40 @@ async function backHome(page) {
         g1sx.firstSub === '生活中的数', g1sx.firstSub);
     chk('能从一年级数学章节页退回主页', await backHome(page));
 
+    /* ===== 9) 一年级语文：对齐五年级版式，每章后也跟单元测试 ===== */
+    await clickText(page, '.subj-card', '语文');
+    await page.waitForTimeout(250);
+    const g1yw = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const names = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-name'))
+        .map(e => e.textContent.trim());
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      return { seq, names, subs };
+    });
+    chk('一年级语文单元测试紧跟每章后面（C U 交替，共 12 组）',
+        /^CU(CU)*$/.test(g1yw.seq) && g1yw.names.length === 12,
+        g1yw.seq + ' / ' + g1yw.names.length + ' 个');
+    chk('一年级语文首条单元测试标为「第1单元」·副标题「识字（一）」',
+        /第1单元/.test(g1yw.names[0] || '') && g1yw.subs[0] === '识字（一）',
+        (g1yw.names[0] || '') + ' / ' + (g1yw.subs[0] || ''));
+    chk('一年级语文上册跳号的第5单元照名字标（不重编号）',
+        /第5单元/.test(g1yw.names[3] || ''), g1yw.names[3] || '');
+    chk('一年级语文「古诗积累」兜底为「第7单元」（不与第1单元撞车）',
+        /第7单元/.test(g1yw.names[11] || ''), g1yw.names[11] || '');
+    await page.evaluate(() => document.querySelectorAll('#chaptersBody .unit-item')[0].click());
+    await page.waitForTimeout(300);
+    const g1ywq = await page.evaluate(() => ({
+      inQuiz: (() => { const v = document.getElementById('view-quiz'); return !!v && v.className.indexOf('hidden') < 0; })(),
+      n: (window.quizQuestions || []).length,
+      codes: Array.from(new Set((window.quizQuestions || []).map(q => q.c))),
+    }));
+    chk('一年级语文点单元测试能进入做题页（本单元 20 题）', g1ywq.inQuiz && g1ywq.n === 20,
+        g1ywq.n + ' 道 / ' + g1ywq.codes.join(','));
+    chk('能从一年级语文单元测试退回主页', await backHome(page));
+
     chk('全程无 JS 报错', errors.length === 0, errors.slice(0, 3).join(' | '));
 
     await browser.close();

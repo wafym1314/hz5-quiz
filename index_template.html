@@ -648,6 +648,10 @@ function renderCalendar(){
 /* ============ 章节页 ============ */
 var currentSubject = null;
 var SUBJECT_NAMES = { yw:"语文", sx:"数学", en:"英语", sci:"科学" };
+/* 语文默认不显示单元测试：多数年级一章=一单元，测试和单章练习完全重复。
+   白名单年级例外（每章后都插）：5 = 按课归并跨课单元（版式基准）；
+   1 = 用户要求与五年级版式对齐。科学则所有年级都不插（纯重复入口）。 */
+var UNIT_TEST_YW_GRADES = { "1": true, "5": true };
 
 function openSubject(sub){
   currentSubject = sub;
@@ -702,14 +706,15 @@ function openSubject(sub){
       + '<div class="chapter-badge '+cls+'">'+badge+'</div></div>';
 
     /* 本单元最后一课之后，插一条单元测试。
-       语文（按课编排）：只在「跨多课」的单元后面插，避免重复入口。
-       数学 / 英语：每章即一单元，每章后面都插一条单元测试
-       （五上 U1→测→U2→测…，五上第1单元→测→第2单元→测…），
-       这样和语文一样「先学完一单元，再测一单元」。
-       科学不改：一章=一单元时单元测试和单章练习抽题范围完全一致，纯属重复入口。 */
+       数学 / 英语：全年级每章后都插（一章即一单元）。
+       语文：只对白名单年级插（5 年级按课归并跨课单元；1 年级对齐五年级版式），
+       其它年级一章=一单元，与单章练习重复，不插。
+       科学：所有年级都不插，单元测试和单章练习抽题范围完全一致，纯属重复入口。 */
     var u = unitAfter[ch.c];
     if(!u) return;   // 本单元还有后续课，继续往下排
-    if(sub !== "sx" && sub !== "en" && u.codes.length <= 1) return;
+    var unitEveryChapter = (sub === "sx") || (sub === "en")
+        || (sub === "yw" && UNIT_TEST_YW_GRADES[currentGrade]);
+    if(!unitEveryChapter && u.codes.length <= 1) return;
     var uName = '📝 单元测试 · 第' + (u.u + 1) + '单元';
     var uSub  = u.sub || u.label;
     html += '<div class="unit-item" onclick="startUnitTest(\''+sub+'\','+u.idx+')">'
@@ -840,15 +845,18 @@ function buildUnits(k){
   // 只有按「课」编排的语文需要合并成单元；其余科目一章 = 一单元
   var needGroup = (sub === "yw") && YW_UNITS[currentGrade + "上"];
   if(!needGroup){
-    // 数学 / 英语 / 科学：一章即一单元。
-    // 单元号优先从章节名里取（「第3单元」「Unit 6」「第一单元」），取不到再按上/下册递增兜底。
-    // 不能只按册递增：一/二年级英语 1-10 连续编（一下从 Unit 6 起）、四/六年级英语跳号，
+    // 数学 / 英语 / 科学 / 白名单年级语文：一章即一单元。
+    // 单元号优先从章节名里取（「第3单元」「Unit 6」「第一单元」）；
+    // 取不到的（如「一年级·古诗积累」）接着上一个单元号递增兜底，
+    // 避免从 1 重计后和前面真正的「第1单元」撞车。
+    // 不能按册重置递增：一/二年级英语 1-10 连续编（一下从 Unit 6 起）、四/六年级英语跳号，
     // 按册重置会把「一下·Unit 6」错标成「第1单元」。
-    var up = 0, dn = 0;
+    var lastU = 0;
     return list.map(function(ch, i){
       var isDown = ch.ch.indexOf("下") >= 0;
-      var named = unitNumFromName(ch.ch);          // 0 = 章节名里没有单元号
-      var u = named || (isDown ? ++dn : ++up);     // 1-based
+      var named = unitNumFromName(ch.ch);        // 0 = 章节名里没有单元号
+      var u = named || (lastU + 1);              // 1-based
+      lastU = u;
       var total = (QA[k] || []).filter(function(q){ return q.c === ch.c; }).length;
       // 副标题只留「主题」：去掉「一上·」前缀和「第N单元 / Unit N」编号
       var sub = ch.ch.replace(/^.*?·\s*/, "")
