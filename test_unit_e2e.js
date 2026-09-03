@@ -296,12 +296,17 @@ async function backHome(page) {
     chk('做第 1 课时全部是本课的题（不掺其它课）',
         cp.codes.length === 1, '涉及章节 ' + cp.codes.join(',') + ' / ' + cp.n + ' 道');
 
-    /* ===== 7) 科学保持不插单元测试（避免与单章练习重复的入口） ===== */
+    /* ===== 7) 科学：2026-09-03 起全学科统一版式，也插单元测试 ===== */
     chk('能从语文做题页退回主页', await backHome(page));
     await clickText(page, '.subj-card', '科学');
     await page.waitForTimeout(250);
-    const sciU = await page.evaluate(() => document.querySelectorAll('.unit-item').length);
-    chk('科学不出现单元测试入口（与单章练习重复，刻意保持隐藏）', sciU === 0, sciU + ' 个');
+    const sciOrder = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      return rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+    });
+    chk('科学出现单元测试入口（全学科统一版式，每章后一条）',
+        /^CU(CU)*$/.test(sciOrder), sciOrder);
     chk('能从科学章节页退回主页', await backHome(page));
 
     /* ===== 8) 一年级：同样每章后跟单元测试，且单元号跟章节名一致 =====
@@ -378,6 +383,62 @@ async function backHome(page) {
     chk('一年级语文点单元测试能进入做题页（本单元 20 题）', g1ywq.inQuiz && g1ywq.n === 20,
         g1ywq.n + ' 道 / ' + g1ywq.codes.join(','));
     chk('能从一年级语文单元测试退回主页', await backHome(page));
+
+    /* ===== 10) 六年级英语：按名字单元号排序（修复 6en 六上 c 码错位） =====
+       6en-3 存的是「第4单元」、6en-5 存的是「第3单元」，按 c 码排界面会乱成
+       1,2,4,5,3,6；2026-09-03 起英语按章节名里的单元号升序展示。 */
+    await clickText(page, '.grade-tab', '6年级');
+    await page.waitForTimeout(250);
+    await clickText(page, '.subj-card', '英语');
+    await page.waitForTimeout(250);
+    const g6en = await page.evaluate(() => {
+      const chs = Array.from(document.querySelectorAll('#chaptersBody .chapter-item .chapter-name'))
+        .map(e => e.textContent.trim());
+      const seq = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'))
+        .map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      return { chs, seq };
+    });
+    const g6Pairs = g6en.chs.map(t => {
+      const m = /第\s*(\d+)\s*单元/.exec(t) || /Unit\s*(\d+)/i.exec(t);
+      return m ? { down: t.indexOf('下') >= 0, n: parseInt(m[1], 10) } : null;
+    }).filter(Boolean);
+    let g6Sorted = true;
+    let g6Blocks = true;
+    for (let i = 1; i < g6Pairs.length; i++) {
+      if (g6Pairs[i].down === g6Pairs[i - 1].down && g6Pairs[i].n <= g6Pairs[i - 1].n) g6Sorted = false;
+      if (g6Pairs[i].down < g6Pairs[i - 1].down) g6Blocks = false;   // 上册块必须整体在前
+    }
+    chk('六年级英语章节按单元号升序（1,2,3,4,5,6，不再是 1,2,4,5,3,6）',
+        g6Sorted && g6Pairs.length >= 9,
+        g6Pairs.map(p => (p.down ? '下' : '上') + p.n).join(','));
+    chk('六年级英语上册整块在前、下册在后（不交错）', g6Blocks,
+        g6Pairs.map(p => (p.down ? '下' : '上') + p.n).join(','));
+    chk('六年级英语也是 C U 交替（全学科统一版式）', /^CU(CU)*$/.test(g6en.seq), g6en.seq);
+    chk('能从六年级英语章节页退回主页', await backHome(page));
+
+    /* ===== 11) 二年级语文：单元级题库同样每章后跟单元测试 ===== */
+    await clickText(page, '.grade-tab', '2年级');
+    await page.waitForTimeout(250);
+    await clickText(page, '.subj-card', '语文');
+    await page.waitForTimeout(250);
+    const g2yw = await page.evaluate(() => {
+      const seq = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'))
+        .map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const names = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-name'))
+        .map(e => e.textContent.trim());
+      return { seq, names };
+    });
+    chk('二年级语文单元测试紧跟每章后面（C U 交替，共 12 组）',
+        /^CU(CU)*$/.test(g2yw.seq) && g2yw.names.length === 12,
+        g2yw.seq + ' / ' + g2yw.names.length + ' 个');
+    chk('二年级语文首条单元测试标为「第1单元」', /第1单元/.test(g2yw.names[0] || ''),
+        g2yw.names[0] || '');
+    chk('能从二年级语文章节页退回主页', await backHome(page));
+    // 切回默认五年级，避免影响后续目标（tv 端从文件重新加载，这里只是保险）
+    await clickText(page, '.grade-tab', '5年级');
+    await page.waitForTimeout(200);
 
     chk('全程无 JS 报错', errors.length === 0, errors.slice(0, 3).join(' | '));
 

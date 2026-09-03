@@ -529,6 +529,26 @@ function unitNumFromName(name){
   return 0;
 }
 
+/* 英语章节按「上下册 → 章节名里的单元号」排序（名字为准，稳定排序）。
+   6en 六上的 c 码与单元名错位（6en-3 存的是「第4单元」、6en-5 存的是
+   「第3单元」），按 c 码排序界面会排成 1,2,4,5,3,6。改成先按册分组
+   （上册在前），同册内按名字提取的单元号升序；没写单元号的章节排在
+   本册末尾，彼此之间保持原顺序。 */
+function unitSorted(list){
+  return list.slice().map(function(ch, i){ return { ch: ch, i: i }; })
+    .sort(function(a, b){
+      var da = a.ch.ch.indexOf("下") >= 0 ? 1 : 0;
+      var db = b.ch.ch.indexOf("下") >= 0 ? 1 : 0;
+      if(da !== db) return da - db;   // 上册在前，下册在后
+      var ua = unitNumFromName(a.ch.ch), ub = unitNumFromName(b.ch.ch);
+      if(ua && ub) return ua - ub;
+      if(ua) return -1;
+      if(ub) return 1;
+      return a.i - b.i;   // 同号/都无号：保持原序（老 WebView 的 sort 不保证稳定）
+    })
+    .map(function(x){ return x.ch; });
+}
+
 function rebuildChapters(){
   CHAPTERS = {};
   GRADES.forEach(function(g){ SUBJECTS.forEach(function(s){ CHAPTERS[key(g,s)] = []; }); });
@@ -648,16 +668,19 @@ function renderCalendar(){
 /* ============ 章节页 ============ */
 var currentSubject = null;
 var SUBJECT_NAMES = { yw:"语文", sx:"数学", en:"英语", sci:"科学" };
-/* 语文默认不显示单元测试：多数年级一章=一单元，测试和单章练习完全重复。
-   白名单年级例外（每章后都插）：5 = 按课归并跨课单元（版式基准）；
-   1 = 用户要求与五年级版式对齐。科学则所有年级都不插（纯重复入口）。 */
-var UNIT_TEST_YW_GRADES = { "1": true, "5": true };
+/* 2026-09-03 版式统一（用户要求「所有年级所有学科都按五年级语文的排列规则」）：
+   每个单元最后一课后都插一条「📝 单元测试」，全年级全学科生效。
+   原先「语文 2/3/4/6 年级、科学不插（和单章练习抽题重复）」的规则取消 ——
+   版式统一优先于去重；单元测试 30 题与单章练习 20 题仍互为补充。 */
 
 function openSubject(sub){
   currentSubject = sub;
   var k = key(currentGrade, sub);
   document.getElementById("chSubjectTitle").textContent = currentGrade+"年级 " + SUBJECT_NAMES[sub] + " · 选章节";
-  var list = CHAPTERS[k] || [];
+  /* 英语按名字里的单元号排序（unitSorted 修 6en 六上的 c 码错位）；
+     其它科目不重排，保持 c 码顺序 —— 语文/科学的章节名大多没有单元号，
+     重排反而会把无号章节全挤到末尾，打乱原有教学顺序。 */
+  var list = (sub === "en") ? unitSorted(CHAPTERS[k] || []) : (CHAPTERS[k] || []);
   if(list.length === 0){
     document.getElementById("chaptersBody").innerHTML = '<div class="part-label">这个年级的'+SUBJECT_NAMES[sub]+'题目还在整理中，敬请期待～</div>';
     showView("view-chapters");
@@ -706,16 +729,12 @@ function openSubject(sub){
       + '<div class="chapter-badge '+cls+'">'+badge+'</div></div>';
 
     /* 本单元最后一课之后，插一条单元测试。
-       数学 / 英语：全年级每章后都插（一章即一单元）。
-       语文：只对白名单年级插（5 年级按课归并跨课单元；1 年级对齐五年级版式），
-       其它年级一章=一单元，与单章练习重复，不插。
-       科学：所有年级都不插，单元测试和单章练习抽题范围完全一致，纯属重复入口。 */
+       2026-09-03 起：全年级全学科统一版式（语文 2/3/4/6 年级、科学原来不插，
+       现在与数学/英语/一五年级语文保持一致，都按「课文们 → 单元测试」排版）。
+       见文件顶部 SUBJECT_NAMES 下方的版式说明。 */
     var u = unitAfter[ch.c];
     if(!u) return;   // 本单元还有后续课，继续往下排
-    var unitEveryChapter = (sub === "sx") || (sub === "en")
-        || (sub === "yw" && UNIT_TEST_YW_GRADES[currentGrade]);
-    if(!unitEveryChapter && u.codes.length <= 1) return;
-    var uName = '📝 单元测试 · 第' + (u.u + 1) + '单元';
+    var uName = '📝 单元测试 · 第' + (u.nu || (u.u + 1)) + '单元';
     var uSub  = u.sub || u.label;
     html += '<div class="unit-item" onclick="startUnitTest(\''+sub+'\','+u.idx+')">'
       + '<div class="unit-main"><div class="unit-name">'+uName+'</div>'
@@ -835,15 +854,21 @@ function startChapter(sub, c){
 var YW_UNITS = {
   // 每个数=该单元包含几课（按当前题库里的课文顺序切）
   "5上": [3,4,3,4,2,3,3,3],   // 五上 2025新版 25 课 → 8 单元（桂花雨=第1课）
-  "5下": [4,4,4,2,3,3,3]      // 五下 23 课 → 7 个单元
+  "5下": [4,4,4,2,3,3,3],     // 五下 23 课 → 7 个（题库无第3单元综合性学习的课文）
+  // 五下真实单元号：教材第3单元是「综合性学习：遨游汉字王国」，没有课文，
+  // 题库直接跳过，所以显示编号要按 1,2,4,5,6,7,8 —— 不能顺序递增（否则错一位）
+  "5下N": [1,2,4,5,6,7,8]
 };
 
 function buildUnits(k){
-  var list = CHAPTERS[k] || [];
-  if(list.length === 0) return [];
+  var raw = CHAPTERS[k] || [];
+  if(raw.length === 0) return [];
   var sub = k.replace(/^\d+/, "");
   // 只有按「课」编排的语文需要合并成单元；其余科目一章 = 一单元
   var needGroup = (sub === "yw") && YW_UNITS[currentGrade + "上"];
+  // 与 openSubject 用同一份排序结果（英语按名字单元号重排），否则
+  // unitAfter 挂靠的章节顺序和界面显示顺序会不一致
+  var list = needGroup ? raw : (sub === "en" ? unitSorted(raw) : raw);
   if(!needGroup){
     // 数学 / 英语 / 科学 / 白名单年级语文：一章即一单元。
     // 单元号优先从章节名里取（「第3单元」「Unit 6」「第一单元」）；
@@ -870,7 +895,10 @@ function buildUnits(k){
   while(cursor < list.length){
     var isDown = list[cursor].ch.indexOf("下") >= 0;
     var sizes = isDown ? (YW_UNITS[currentGrade + "下"] || []) : (YW_UNITS[currentGrade + "上"] || []);
+    // 真实单元号：五下第3单元（综合性学习）没进题库，用 "5下N" 映射回教材编号
+    var nums = isDown ? (YW_UNITS[currentGrade + "下N"] || null) : null;
     var u = (half === null || isDown !== half) ? 0 : (units.length ? units[units.length-1].u + 1 : 0);
+    var nu = (!isDown || !nums) ? (u + 1) : (nums[u] || (u + 1));
     half = isDown;
     var size = sizes[u] || 1;
     var slice = list.slice(cursor, cursor + size);
@@ -886,7 +914,8 @@ function buildUnits(k){
     units.push({
       idx: units.length,
       u: u,
-      label: (isDown ? "五下·第" : "五上·第") + (u + 1) + "单元 " + names.join("、"),
+      nu: nu,   // 展示用真实单元号（nu = 1-based 教材单元号）
+      label: (isDown ? "五下·第" : "五上·第") + nu + "单元 " + names.join("、"),
       sub: names.join("、"),
       codes: slice.map(function(ch){ return ch.c; }),
       total: total,
