@@ -99,6 +99,19 @@ async function backHome(page) {
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
+
+    // 不依赖外网：index.html 加载后会 loadExternalBank() 从 CDN 拉 questions.json 覆盖内联题库，
+    // CDN 上可能是旧 SHA（12h 缓存 + 未 push 的新题），会污染测试。这里把 CDN 请求顶替成本地
+    // 最新 questions.json，测的是「当前工作区题库」的渲染行为，而不是 CDN 内容。
+    const LOCAL_BANK = fs.readFileSync('G:/desktop/惠州五年级每日练/questions.json', 'utf8');
+    await page.route('**/*', (route) => {
+      const url = route.request().url();
+      if (/jsdelivr|questions\.json/i.test(url)) {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: LOCAL_BANK });
+      }
+      return route.continue();
+    });
+
     await page.goto('file:///' + tgt.file.replace(/\\/g, '/'));
     await page.waitForTimeout(600);
 
@@ -436,6 +449,67 @@ async function backHome(page) {
     chk('二年级语文首条单元测试标为「第1单元」', /第1单元/.test(g2yw.names[0] || ''),
         g2yw.names[0] || '');
     chk('能从二年级语文章节页退回主页', await backHome(page));
+
+    /* ===== 12) 四年级语文：2026-09-03 重出为逐课结构 =====
+       四上 2026 秋新版 27 课 + 四下 2019 旧版 28 课 + 2 综合章节 = 57 章；
+       四上 8 单元 + 四下 8 单元 = 16 个单元测试；综合章节不挂单元测试。 */
+    await clickText(page, '.grade-tab', '4年级');
+    await page.waitForTimeout(250);
+    await clickText(page, '.subj-card', '语文');
+    await page.waitForTimeout(250);
+    const g4yw = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const chapters = Array.from(document.querySelectorAll('#chaptersBody .chapter-item .chapter-name'))
+        .map(e => e.textContent.trim());
+      const units = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-name'))
+        .map(e => e.textContent.trim());
+      const parts = Array.from(document.querySelectorAll('#chaptersBody .part-label'))
+        .map(e => e.textContent.trim());
+      return { seq, chapters, units, parts };
+    });
+    chk('四年级语文逐课结构：55 课 + 2 综合 = 57 章',
+        g4yw.chapters.length === 57, g4yw.chapters.length + ' 章');
+    chk('四年级语文 16 个单元测试（四上 8 + 四下 8）',
+        g4yw.units.length === 16, g4yw.units.length + ' 个');
+    chk('四年级语文第 1 课是《观潮》（2026 秋新版，走月亮已移出）',
+        /观潮/.test(g4yw.chapters[0] || ''), g4yw.chapters[0] || '');
+    chk('四年级语文新增课文《方帽子店》《田忌赛马》已进第 2 单元',
+        /方帽子店/.test(g4yw.chapters[5] || '') && /田忌赛马/.test(g4yw.chapters[6] || ''),
+        g4yw.chapters.slice(4, 7).join(' / '));
+    chk('四年级语文综合章节归「综合练习」且不挂单元测试',
+        g4yw.parts.indexOf('综合练习') >= 0 && /CC$/.test(g4yw.seq),
+        g4yw.parts.join(' / ') + ' · 尾部 ' + g4yw.seq.slice(-6));
+    chk('四年级语文四上/四下单元号各 1-8（共 16 个）',
+        g4yw.units.filter(u => /第[1-8]单元/.test(u)).length === 16,
+        g4yw.units.join(' / '));
+    chk('能从四年级语文章节页退回主页', await backHome(page));
+
+    /* ===== 13) 六年级语文：2026-09-03 补全新版 U3/U5/U7 =====
+       六上 8 单元 + 六下 5 单元 + 综合 1 = 14 章。新版第七单元「科学与思考」换掉了
+       旧版「伯牙鼓琴/月光曲」；第 3 单元「有目的地阅读」、第 5 单元「围绕中心意思写」补全。 */
+    await clickText(page, '.grade-tab', '6年级');
+    await page.waitForTimeout(250);
+    await clickText(page, '.subj-card', '语文');
+    await page.waitForTimeout(250);
+    const g6yw = await page.evaluate(() => {
+      const chapters = Array.from(document.querySelectorAll('#chaptersBody .chapter-item .chapter-name'))
+        .map(e => e.textContent.trim());
+      const units = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-name'))
+        .map(e => e.textContent.trim());
+      return { chapters, units };
+    });
+    chk('六年级语文 14 章（六上 8 + 六下 5 + 综合 1）',
+        g6yw.chapters.length === 14, g6yw.chapters.length + ' 章');
+    chk('六年级语文第 3 单元是「有目的地阅读」（新版补全）',
+        /有目的地阅读/.test(g6yw.chapters[2] || ''), g6yw.chapters[2] || '');
+    chk('六年级语文第 7 单元是「科学与思考」（新版换新，伯牙鼓琴/月光曲已移出）',
+        /科学与思考/.test(g6yw.chapters[6] || ''), g6yw.chapters[6] || '');
+    chk('六年级语文旧版课文《伯牙鼓琴》不再出现',
+        g6yw.chapters.every(t => !/伯牙鼓琴/.test(t)), '');
+    chk('能从六年级语文章节页退回主页', await backHome(page));
+
     // 切回默认五年级，避免影响后续目标（tv 端从文件重新加载，这里只是保险）
     await clickText(page, '.grade-tab', '5年级');
     await page.waitForTimeout(200);

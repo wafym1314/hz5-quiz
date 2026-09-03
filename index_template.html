@@ -849,15 +849,19 @@ function startChapter(sub, c){
 /* ===== 单元测试 =====
    单元测试 = 把整个单元的题合在一起测（30 道），区别于单课/单单元的 20 道练习。
    数学 / 英语 / 科学：一个「章节」本身就是一个单元，单元测试会覆盖该单元全部题。
-   语文：五上五下是按「课」分的，一个单元含好几课，靠 YW_UNITS 把课归到单元；
+   语文：四、五年级是按「课」分的，一个单元含好几课，靠 YW_UNITS 把课归到单元；
         其它年级语文的章节本身就是「第 N 单元」，一章即一单元。 */
 var YW_UNITS = {
   // 每个数=该单元包含几课（按当前题库里的课文顺序切）
+  "4上": [3,4,3,4,2,3,4,4],   // 四上 2026秋新版 27 课 → 8 单元（观潮=第1课；走月亮已移出）
+  "4下": [4,4,4,3,2,4,4,3],   // 四下 2019旧版 28 课 → 8 单元（2027 春前不换新版）
   "5上": [3,4,3,4,2,3,3,3],   // 五上 2025新版 25 课 → 8 单元（桂花雨=第1课）
   "5下": [4,4,4,2,3,3,3],     // 五下 23 课 → 7 个（题库无第3单元综合性学习的课文）
   // 五下真实单元号：教材第3单元是「综合性学习：遨游汉字王国」，没有课文，
   // 题库直接跳过，所以显示编号要按 1,2,4,5,6,7,8 —— 不能顺序递增（否则错一位）
   "5下N": [1,2,4,5,6,7,8]
+  // 注意：4yw 题库末尾有两个「综合练习」章节（4yw-56/57，章节名不含「上/下」），
+  // buildUnits 分组循环遇到不含上下册标记的章节会直接 break —— 综合章节不并进单元、不挂单元测试。
 };
 
 function buildUnits(k){
@@ -893,6 +897,11 @@ function buildUnits(k){
   var units = [];
   var half = null, cursor = 0, order = 0;
   while(cursor < list.length){
+    // 「综合练习」章节（章节名不含「上/下」，如 4yw-56 字词辨析、4yw-57 修改病句）
+    // 不参与单元分组：留在章节列表末尾单独显示，也不挂单元测试（它们不属于任何教材单元）。
+    // 按编排它们一定排在最后，所以直接 break 是安全的。
+    var nmCur = list[cursor].ch;
+    if(nmCur.indexOf("上") < 0 && nmCur.indexOf("下") < 0) break;
     var isDown = list[cursor].ch.indexOf("下") >= 0;
     var sizes = isDown ? (YW_UNITS[currentGrade + "下"] || []) : (YW_UNITS[currentGrade + "上"] || []);
     // 真实单元号：五下第3单元（综合性学习）没进题库，用 "5下N" 映射回教材编号
@@ -915,7 +924,7 @@ function buildUnits(k){
       idx: units.length,
       u: u,
       nu: nu,   // 展示用真实单元号（nu = 1-based 教材单元号）
-      label: (isDown ? "五下·第" : "五上·第") + nu + "单元 " + names.join("、"),
+      label: (isDown ? currentGrade + "下·第" : currentGrade + "上·第") + nu + "单元 " + names.join("、"),
       sub: names.join("、"),
       codes: slice.map(function(ch){ return ch.c; }),
       total: total,
