@@ -376,16 +376,17 @@ async function backHome(page) {
         .map(e => e.textContent.trim());
       return { seq, names, subs };
     });
-    chk('一年级语文单元测试紧跟每章后面（C U 交替，共 12 组）',
-        /^CU(CU)*$/.test(g1yw.seq) && g1yw.names.length === 12,
+    // 2025 秋新版目录：一上 8 单元 + 一下 8 单元 = 16 个单元测试，末尾另有「古诗积累」综合章（不挂单元测试）
+    chk('一年级语文 16 个单元测试（一上 8 + 一下 8，新版目录）',
+        /^(CU){16}C?$/.test(g1yw.seq) && g1yw.names.length === 16,
         g1yw.seq + ' / ' + g1yw.names.length + ' 个');
     chk('一年级语文首条单元测试标为「第1单元」·副标题「识字（一）」',
         /第1单元/.test(g1yw.names[0] || '') && g1yw.subs[0] === '识字（一）',
         (g1yw.names[0] || '') + ' / ' + (g1yw.subs[0] || ''));
-    chk('一年级语文上册跳号的第5单元照名字标（不重编号）',
-        /第5单元/.test(g1yw.names[3] || ''), g1yw.names[3] || '');
-    chk('一年级语文「古诗积累」兜底为「第7单元」（不与第1单元撞车）',
-        /第7单元/.test(g1yw.names[11] || ''), g1yw.names[11] || '');
+    chk('一年级语文第4单元标为「第4单元」（新版连续编号，不再跳号）',
+        /第4单元/.test(g1yw.names[3] || ''), g1yw.names[3] || '');
+    chk('一年级语文第9个单元测试是一下第1单元（按章节名取号）',
+        /第1单元/.test(g1yw.names[8] || ''), g1yw.names[8] || '');
     await page.evaluate(() => document.querySelectorAll('#chaptersBody .unit-item')[0].click());
     await page.waitForTimeout(300);
     const g1ywq = await page.evaluate(() => ({

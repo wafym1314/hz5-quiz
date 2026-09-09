@@ -18,3 +18,6 @@ _emu/*.log
 _emu/ev/
 _emu/E[0-9]*/
 _emu/[A-Z][A-Z]/
+
+# E2E 测试截图（产物，不入仓）
+e2e_refresh_*.png

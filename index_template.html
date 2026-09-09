@@ -158,6 +158,10 @@
   .quiz-img { max-width:300px; margin:0 auto 16px; border-radius:12px; background:#fff; border:1px solid #e3eae6; overflow:hidden; }
   .quiz-img > svg, .quiz-img > img { width:100%; height:auto; display:block; }
   .quiz-q { font-size:19px; font-weight:700; line-height:1.6; margin-bottom:18px; }
+  .tts-row { margin:0 0 14px; }
+  .tts-btn { display:inline-block; padding:9px 20px; border-radius:22px; background:linear-gradient(135deg,#ffe0ec,#fff0f6); color:#d94f8c; font-weight:700; font-size:15px; cursor:pointer; border:2px solid #ffb8d4; }
+  .tts-btn:focus { outline:3px solid #ffd24d; outline-offset:2px; }
+  .tts-btn.speaking { background:linear-gradient(135deg,#ffc0dd,#ffe6f2); }
   .option {
     display:block; width:100%; text-align:left;
     background:#f6f9f7; border:2px solid #e3eae6; border-radius:14px;
@@ -287,6 +291,7 @@
       <div class="quiz-chapter" id="quizChapter"></div>
       <div id="quizImg"></div>
       <div class="quiz-q" id="quizQ"></div>
+      <div class="tts-row hidden" id="ttsRow"><div class="tts-btn" tabindex="0" onclick="ttsReadQuestion()">🔊 听老师读题</div></div>
       <div id="quizBody"></div>
       <div class="feedback" id="quizFeedback"></div>
       <div class="explain" id="quizExplain">
@@ -1027,6 +1032,62 @@ function imgFail(el){
   }
   el.parentNode.style.display = "none";
 }
+// ══════════ 一年级语音读题（小女孩音色）══════════
+// 用浏览器自带 Web Speech API：优先挑中文女声，再把 pitch 调高、语速放缓，听感接近小女孩。
+// 一年级孩子识字少，读题能帮他独立做题；2～6 年级不显示此按钮（不打扰）。
+// 说明：浏览器自带音色有限，"小女孩"是靠"中文女声 + 高音调 + 慢语速"模拟出来的；
+//      若想要更逼真的童声，可换成讯飞/Azure 等 TTS 服务（需 API key）。
+var TTS_ENABLED = true;
+var ttsVoice = null;
+function ttsPickVoice(){
+  if(!window.speechSynthesis) return null;
+  var vs = [];
+  try{ vs = speechSynthesis.getVoices() || []; }catch(e){ return null; }
+  if(!vs.length) return null;
+  var zh = vs.filter(function(v){ return /zh|cmn|CN|Chinese/i.test((v.lang||"")+" "+(v.name||"")); });
+  if(!zh.length) return null;
+  var named = zh.filter(function(v){ return /Tingting|Ting-Ting|Mei-Jia|Meijia|Xiaoxiao|Yaoyao|Huihui|婷婷|晓晓|美佳/i.test(v.name||""); });
+  if(named.length) return named[0];
+  var female = zh.filter(function(v){ return /female|woman|girl|女/i.test(v.name||""); });
+  if(female.length) return female[0];
+  return zh[0];
+}
+function ttsSpeak(text){
+  if(!TTS_ENABLED || !text) return;
+  if(!window.speechSynthesis || typeof SpeechSynthesisUtterance === "undefined") return;
+  try{ speechSynthesis.cancel(); }catch(e){}
+  var u = new SpeechSynthesisUtterance(text);
+  if(!ttsVoice) ttsVoice = ttsPickVoice();
+  if(ttsVoice) u.voice = ttsVoice;
+  u.lang = "zh-CN";
+  u.rate  = 0.88;  // 稍慢，一年级听得清
+  u.pitch = 1.6;   // 音调调高 → 小女孩音色
+  u.volume = 1;
+  var btn = document.querySelector("#ttsRow .tts-btn");
+  function done(){ if(btn){ try{ btn.classList.remove("speaking"); }catch(e){} } }
+  u.onend = done; u.onerror = done;
+  if(btn){ try{ btn.classList.add("speaking"); }catch(e){} }
+  try{ speechSynthesis.speak(u); }catch(e){ done(); }
+}
+function ttsIsGradeOne(){ return String(currentGrade) === "1"; }
+function ttsReadQuestion(){
+  if(typeof quizQuestions === "undefined" || !quizQuestions[quizIndex]) return;
+  var q = quizQuestions[quizIndex];
+  var t = q.q || "";
+  if(q.f === 0){
+    // 读屏幕上实际显示的选项（已打乱并带 A/B/C/D 前缀），避免"读的 A"和"看到的 A"不一致
+    var arr = [];
+    try{
+      var opts = document.querySelectorAll("#quizBody .option");
+      for(var i=0;i<opts.length;i++){ arr.push(opts[i].textContent); }
+    }catch(e){}
+    if(arr.length) t += "。选项是：" + arr.join("；") + "。";
+  }
+  ttsSpeak(t);
+}
+// 某些浏览器首次 getVoices() 返回空， voiceschanged 后再取一次
+try{ if(window.speechSynthesis){ speechSynthesis.onvoiceschanged = function(){ ttsVoice = ttsPickVoice(); }; } }catch(e){}
+
 function renderQuestion(){
   var q = quizQuestions[quizIndex];
   document.getElementById("quizProgress").textContent = "第 "+(quizIndex+1)+" / "+quizQuestions.length+" 题";
@@ -1060,6 +1121,12 @@ function renderQuestion(){
       el.onclick = function(){ answer(idx); };
       body.appendChild(el);
     });
+  }
+  // 一年级：显示「听老师读题」按钮并自动读一遍（放在选项渲染后，读到的就是屏幕上的顺序）
+  var ttsRow = document.getElementById("ttsRow");
+  if(ttsRow){
+    if(ttsIsGradeOne()){ ttsRow.classList.remove("hidden"); ttsReadQuestion(); }
+    else { ttsRow.classList.add("hidden"); }
   }
 }
 function answer(idx){
