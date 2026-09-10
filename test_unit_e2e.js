@@ -507,6 +507,25 @@ async function backHome(page) {
         g2sx.firstSub === '加与减', g2sx.firstSub);
     chk('能从二年级数学章节页退回主页', await backHome(page));
 
+    /* ===== 11.6) 二年级英语：人教 PEP 一起点 2024 新版，10 Unit × 20 题 = 200 题 ===== */
+    await clickText(page, '.subj-card.en', '英语');
+    await page.waitForTimeout(250);
+    const g2en = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      return { seq, subs };
+    });
+    chk('二年级英语单元测试紧跟每章后面（C U 交替，共 10 组）',
+        /^CU(CU)*$/.test(g2en.seq) && g2en.seq.length === 20, g2en.seq);
+    chk('二年级英语首条单元测试副标题是「Fun numbers and letters」（PEP 二上 Unit 1）',
+        /Fun numbers and letters/i.test(g2en.subs[0] || ''), g2en.subs[0] || '');
+    chk('二年级英语第 6 单元是 Unit 6 Put on my coat!（PEP 二下起点）',
+        /Put on my coat/i.test(g2en.subs[5] || ''), g2en.subs[5] || '');
+    chk('能从二年级英语章节页退回主页', await backHome(page));
+
     /* ===== 12) 四年级语文：2026-09-03 重出为逐课结构 =====
        四上 2026 秋新版 27 课 + 四下 2019 旧版 28 课 + 2 综合章节 = 57 章；
        四上 8 单元 + 四下 8 单元 = 16 个单元测试；综合章节不挂单元测试。 */
