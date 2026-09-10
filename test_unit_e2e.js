@@ -363,6 +363,33 @@ async function backHome(page) {
         g1sx.firstSub === '生活中的数', g1sx.firstSub);
     chk('能从一年级数学章节页退回主页', await backHome(page));
 
+    /* ===== 一年级科学：2026-09-10 整套换人教鄂教版（一上 4 + 一下 4 = 8 单元）===== */
+    await clickText(page, '.subj-card', '科学');
+    await page.waitForTimeout(250);
+    const g1sci = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const names = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-name'))
+        .map(e => e.textContent.trim());
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      const chs = Array.from(document.querySelectorAll('#chaptersBody .chapter-item'))
+        .map(e => e.textContent.trim());
+      return { seq, names, subs, chs };
+    });
+    chk('一年级科学单元测试紧跟每章后面（C U 交替，共 8 组）',
+        /^CU(CU)*$/.test(g1sci.seq) && g1sci.names.length === 8,
+        g1sci.seq + ' / ' + g1sci.names.length + ' 个');
+    chk('一年级科学第 1 单元是「走进科学」（人教鄂教版一上）',
+        g1sci.subs[0] === '走进科学', g1sci.subs.join(' / '));
+    chk('一年级科学第 5 单元是「位置和方向」（人教鄂教版一下）',
+        g1sci.subs[4] === '位置和方向', g1sci.subs.join(' / '));
+    chk('一年级科学已无教科版旧章节（比较与测量 / 我们周围的物体）',
+        !g1sci.chs.some(function (t) { return /比较与测量|我们周围的物体/.test(t); }),
+        g1sci.chs.join(' | '));
+    chk('能从一年级科学章节页退回主页', await backHome(page));
+
     /* ===== 9) 一年级语文：对齐五年级版式，每章后也跟单元测试 ===== */
     await clickText(page, '.subj-card', '语文');
     await page.waitForTimeout(250);
