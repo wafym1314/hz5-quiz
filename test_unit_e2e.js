@@ -695,6 +695,25 @@ async function backHome(page) {
         /天气与气候/.test(g4sci.subs[5] || ''), g4sci.subs[5] || '');
     chk('能从四年级科学章节页退回主页', await backHome(page));
 
+    /* ===== 12.7) 四年级英语：人教 PEP（三年级起点）四上 6 + 四下 6 = 12 单元，240 题 ===== */
+    await clickText(page, '.subj-card.en', '英语');
+    await page.waitForTimeout(250);
+    const g4en = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      return { seq, subs };
+    });
+    chk('四年级英语单元测试紧跟每章后面（12 组 CUCU，共 24 项）',
+        /^CU(CU)*$/.test(g4en.seq) && g4en.seq.length === 24, g4en.seq);
+    chk('四年级英语首条单元测试副标题指向四上 Unit 1「My classroom」',
+        /classroom/i.test(g4en.subs[0] || ''), g4en.subs[0] || '');
+    chk('四年级英语第 7 单元是四下 Unit 1「My school」',
+        /my school/i.test(g4en.subs[6] || ''), g4en.subs[6] || '');
+    chk('能从四年级英语章节页退回主页', await backHome(page));
+
     /* ===== 13) 六年级语文：2026-09-03 补全新版 U3/U5/U7 =====
        六上 8 单元 + 六下 5 单元 + 综合 1 = 14 章。新版第七单元「科学与思考」换掉了
        旧版「伯牙鼓琴/月光曲」；第 3 单元「有目的地阅读」、第 5 单元「围绕中心意思写」补全。 */
