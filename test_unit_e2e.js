@@ -459,7 +459,7 @@ async function backHome(page) {
     chk('六年级英语也是 C U 交替（全学科统一版式）', /^CU(CU)*$/.test(g6en.seq), g6en.seq);
     chk('能从六年级英语章节页退回主页', await backHome(page));
 
-    /* ===== 11) 二年级语文：单元级题库同样每章后跟单元测试 ===== */
+    /* ===== 11) 二年级语文：2026-09-10 整套重写，二上 8 + 二下 8 + 综合 1 = 17 章 ===== */
     await clickText(page, '.grade-tab', '2年级');
     await page.waitForTimeout(250);
     await clickText(page, '.subj-card', '语文');
@@ -470,13 +470,23 @@ async function backHome(page) {
         .map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
       const names = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-name'))
         .map(e => e.textContent.trim());
-      return { seq, names };
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      const chs = Array.from(document.querySelectorAll('#chaptersBody .chapter-item'))
+        .map(e => e.textContent.trim());
+      return { seq, names, subs, chs };
     });
-    chk('二年级语文单元测试紧跟每章后面（C U 交替，共 12 组）',
-        /^CU(CU)*$/.test(g2yw.seq) && g2yw.names.length === 12,
+    chk('二年级语文单元测试紧跟每章后面（C U 交替，共 17 组）',
+        /^CU(CU)*$/.test(g2yw.seq) && g2yw.names.length === 17,
         g2yw.seq + ' / ' + g2yw.names.length + ' 个');
-    chk('二年级语文首条单元测试标为「第1单元」', /第1单元/.test(g2yw.names[0] || ''),
-        g2yw.names[0] || '');
+    chk('二年级语文首条单元测试标为「第1单元」·副标题「大自然的秘密」',
+        /第1单元/.test(g2yw.names[0] || '') && g2yw.subs[0] === '大自然的秘密',
+        (g2yw.names[0] || '') + ' / ' + g2yw.subs.join(' | '));
+    chk('二年级语文第 9 单元是二下「春天来了」（2026 春新版，原先合并的 3 大章已拆开）',
+        g2yw.subs[8] === '春天来了', g2yw.subs.join(' | '));
+    chk('二年级语文末章「二年级·语文知识」也挂单元测试',
+        /语文知识/.test(g2yw.chs[g2yw.chs.length - 1] || ''),
+        g2yw.chs[g2yw.chs.length - 1] || '');
     chk('能从二年级语文章节页退回主页', await backHome(page));
 
     /* ===== 12) 四年级语文：2026-09-03 重出为逐课结构 =====
