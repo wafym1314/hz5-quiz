@@ -545,6 +545,46 @@ async function backHome(page) {
         /了解天气/.test(g2sci.subs[4] || ''), g2sci.subs[4] || '');
     chk('能从二年级科学章节页退回主页', await backHome(page));
 
+    /* ===== 11.8) 三年级语文：2025 秋统编新版 + 2026 春新版，16 单元 + 1 综合 = 342 题 ===== */
+    await clickText(page, '.grade-tab', '3年级');
+    await page.waitForTimeout(250);
+    await clickText(page, '.subj-card', '语文');
+    await page.waitForTimeout(250);
+    const g3yw = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      return { seq, subs };
+    });
+    chk('三年级语文单元测试紧跟每章后面（17 组 CUCU，共 34 项）',
+        /^CU(CU)*$/.test(g3yw.seq) && g3yw.seq.length === 34, g3yw.seq);
+    chk('三年级语文首条单元测试副标题是「学校生活」（统编三上第1单元）',
+        /学校生活/.test(g3yw.subs[0] || ''), g3yw.subs[0] || '');
+    chk('三年级语文第 9 单元是「可爱的生灵」（统编三下第1单元）',
+        /可爱的生灵/.test(g3yw.subs[8] || ''), g3yw.subs[8] || '');
+    chk('能从三年级语文章节页退回主页', await backHome(page));
+
+    /* ===== 11.9) 三年级数学：北师版 15 单元 = 15 组 CUCU 序列 = 300 题 ===== */
+    await clickText(page, '.subj-card', '数学');
+    await page.waitForTimeout(250);
+    const g3sx = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      return { seq, subs };
+    });
+    chk('三年级数学单元测试紧跟每章后面（C U 交替，共 15 组）',
+        /^CU(CU)*$/.test(g3sx.seq) && g3sx.seq.length === 30, g3sx.seq);
+    chk('三年级数学首条单元测试副标题是「混合运算」（北师版三上第1单元）',
+        /混合运算/.test(g3sx.subs[0] || ''), g3sx.subs[0] || '');
+    chk('三年级数学第 9 单元是「除法」（北师版三下第1单元）',
+        /除法/.test(g3sx.subs[8] || ''), g3sx.subs[8] || '');
+    chk('能从三年级数学章节页退回主页', await backHome(page));
+
     /* ===== 12) 四年级语文：2026-09-03 重出为逐课结构 =====
        四上 2026 秋新版 27 课 + 四下 2019 旧版 28 课 + 2 综合章节 = 57 章；
        四上 8 单元 + 四下 8 单元 = 16 个单元测试；综合章节不挂单元测试。 */
