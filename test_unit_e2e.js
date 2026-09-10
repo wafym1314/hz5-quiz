@@ -585,6 +585,42 @@ async function backHome(page) {
         /除法/.test(g3sx.subs[8] || ''), g3sx.subs[8] || '');
     chk('能从三年级数学章节页退回主页', await backHome(page));
 
+    /* ===== 11.10) 三年级英语：人教 PEP（三年级起点）三上 6 + 三下 6 = 12 单元，244 题 ===== */
+    await clickText(page, '.subj-card.en', '英语');
+    await page.waitForTimeout(250);
+    const g3en = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      return { seq, subs };
+    });
+    chk('三年级英语单元测试紧跟每章后面（12 组 CUCU，共 24 项）',
+        /^CU(CU)*$/.test(g3en.seq) && g3en.seq.length === 24, g3en.seq);
+    chk('三年级英语首条单元测试副标题指向三上 Unit 1「Hello!」',
+        /Hello/i.test(g3en.subs[0] || ''), g3en.subs[0] || '');
+    chk('能从三年级英语章节页退回主页', await backHome(page));
+
+    /* ===== 11.11) 三年级科学：人教鄂教版 三上 5 + 三下 6 = 11 单元，225 题 ===== */
+    await clickText(page, '.subj-card.sci', '科学');
+    await page.waitForTimeout(250);
+    const g3sci = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      return { seq, subs };
+    });
+    chk('三年级科学单元测试紧跟每章后面（11 组 CUCU，共 22 项）',
+        /^CU(CU)*$/.test(g3sci.seq) && g3sci.seq.length === 22, g3sci.seq);
+    chk('三年级科学首条单元测试副标题是「有趣的磁铁」（人教鄂教版三上第1单元）',
+        /有趣的磁铁/.test(g3sci.subs[0] || ''), g3sci.subs[0] || '');
+    chk('三年级科学第 6 单元是「溶解与分离」（三下第1单元）',
+        /溶解与分离/.test(g3sci.subs[5] || ''), g3sci.subs[5] || '');
+    chk('能从三年级科学章节页退回主页', await backHome(page));
+
     /* ===== 12) 四年级语文：2026-09-03 重出为逐课结构 =====
        四上 2026 秋新版 27 课 + 四下 2019 旧版 28 课 + 2 综合章节 = 57 章；
        四上 8 单元 + 四下 8 单元 = 16 个单元测试；综合章节不挂单元测试。 */
