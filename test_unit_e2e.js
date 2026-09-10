@@ -489,6 +489,24 @@ async function backHome(page) {
         g2yw.chs[g2yw.chs.length - 1] || '');
     chk('能从二年级语文章节页退回主页', await backHome(page));
 
+    /* ===== 11.5) 二年级数学：北师版 17 单元 = 17 组 CUCU 序列 ===== */
+    await clickText(page, '.subj-card', '数学');
+    await page.waitForTimeout(250);
+    const g2sx = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const firstSub = (function () {
+        const u = document.querySelector('#chaptersBody .unit-item .unit-sub');
+        return u ? u.textContent.trim() : ''; })();
+      return { seq, firstSub };
+    });
+    chk('二年级数学单元测试紧跟每章后面（C U 交替，共 17 组）',
+        /^CU(CU)*$/.test(g2sx.seq) && g2sx.seq.length === 34, g2sx.seq);
+    chk('二年级数学首条单元测试副标题是「加与减」（北师版二上第1单元）',
+        g2sx.firstSub === '加与减', g2sx.firstSub);
+    chk('能从二年级数学章节页退回主页', await backHome(page));
+
     /* ===== 12) 四年级语文：2026-09-03 重出为逐课结构 =====
        四上 2026 秋新版 27 课 + 四下 2019 旧版 28 课 + 2 综合章节 = 57 章；
        四上 8 单元 + 四下 8 单元 = 16 个单元测试；综合章节不挂单元测试。 */

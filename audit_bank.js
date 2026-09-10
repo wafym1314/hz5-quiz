@@ -61,6 +61,11 @@ keys.forEach(k => {
     ' 章｜知识点重复 ' + dupN + ' (' + rate + '%)｜每章<20题 ' + lowCh.length +
     ' 章｜拔高<4 ' + lowHard.length + ' 章｜无填空 ' + noFill.length +
     ' 章｜选项重复 ' + dupOpt.length + ' 题');
+  if (process.argv[3] === 'list') {
+    console.log('  --- ' + k + ' 章节明细 ---');
+    Object.keys(cnt).forEach(c => console.log('    ' + c + ' : 总' + cnt[c] +
+      ' 拔高' + (hard[c] || 0) + ' 填空' + (fill[c] || 0)));
+  }
   if (dupN) {
     const dm = {}; ks.forEach(x => dm[x] = (dm[x] || 0) + 1);
     problems.push('  ' + k + ' 重复的知识点：' +
