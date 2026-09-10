@@ -657,6 +657,25 @@ async function backHome(page) {
         g4yw.units.join(' / '));
     chk('能从四年级语文章节页退回主页', await backHome(page));
 
+    /* ===== 12.5) 四年级数学：北师版 14 单元（四上 8 + 四下 6），280 题 ===== */
+    await clickText(page, '.subj-card', '数学');
+    await page.waitForTimeout(250);
+    const g4sxUnit = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      return { seq, subs };
+    });
+    chk('四年级数学单元测试紧跟每章后面（14 组 CUCU，共 28 项）',
+        /^CU(CU)*$/.test(g4sxUnit.seq) && g4sxUnit.seq.length === 28, g4sxUnit.seq);
+    chk('四年级数学首条单元测试副标题是「认识更大的数」（北师版四上第1单元）',
+        /认识更大的数/.test(g4sxUnit.subs[0] || ''), g4sxUnit.subs[0] || '');
+    chk('四年级数学第 9 单元是「小数的意义和加减法」（北师版四下）',
+        /小数的意义和加减法/.test(g4sxUnit.subs[8] || ''), g4sxUnit.subs[8] || '');
+    chk('能从四年级数学章节页退回主页', await backHome(page));
+
     /* ===== 13) 六年级语文：2026-09-03 补全新版 U3/U5/U7 =====
        六上 8 单元 + 六下 5 单元 + 综合 1 = 14 章。新版第七单元「科学与思考」换掉了
        旧版「伯牙鼓琴/月光曲」；第 3 单元「有目的地阅读」、第 5 单元「围绕中心意思写」补全。 */
