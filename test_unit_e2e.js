@@ -743,6 +743,30 @@ async function backHome(page) {
         g6yw.chapters.every(t => !/伯牙鼓琴/.test(t)), '');
     chk('能从六年级语文章节页退回主页', await backHome(page));
 
+    /* ===== 14) 五年级科学：人教鄂教版 五上 5 + 五下 5 = 10 单元，228 题 =====
+       2026-09-10 治理：原来 54 组知识点标注重复（36%）＋2 组同题干，
+       其中 30 道填空是「把选择题挖个空」式重复，已换成新知识点，
+       其余 104 道只细化标注。现在重复率 0、同题干 0。 */
+    await clickText(page, '.grade-tab', '5年级');
+    await page.waitForTimeout(200);
+    await clickText(page, '.subj-card.sci', '科学');
+    await page.waitForTimeout(250);
+    const g5sci = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      return { seq, subs };
+    });
+    chk('五年级科学单元测试紧跟每章后面（10 组 CUCU，共 20 项）',
+        /^CU(CU)*$/.test(g5sci.seq) && g5sci.seq.length === 20, g5sci.seq);
+    chk('五年级科学首条单元测试副标题是「烧水过程中的热传递」（人教鄂教版五上第1单元）',
+        /烧水过程中的热传递/.test(g5sci.subs[0] || ''), g5sci.subs[0] || '');
+    chk('五年级科学第 6 单元是「昼夜与四季」（五下第1单元）',
+        /昼夜与四季/.test(g5sci.subs[5] || ''), g5sci.subs[5] || '');
+    chk('能从五年级科学章节页退回主页', await backHome(page));
+
     // 切回默认五年级，避免影响后续目标（tv 端从文件重新加载，这里只是保险）
     await clickText(page, '.grade-tab', '5年级');
     await page.waitForTimeout(200);
