@@ -376,9 +376,10 @@ async function backHome(page) {
         .map(e => e.textContent.trim());
       return { seq, names, subs };
     });
-    // 2025 秋新版目录：一上 8 单元 + 一下 8 单元 = 16 个单元测试，末尾另有「古诗积累」综合章（不挂单元测试）
-    chk('一年级语文 16 个单元测试（一上 8 + 一下 8，新版目录）',
-        /^(CU){16}C?$/.test(g1yw.seq) && g1yw.names.length === 16,
+    // 2025 秋新版目录：一上 8 单元 + 一下 8 单元 + 末尾「古诗积累」= 17 章。
+    // 注意：一年级没有配 YW_UNITS，走「一章即一单元」分支，所以古诗积累章也挂单元测试（共 17 个）。
+    chk('一年级语文 17 个单元测试（一上 8 + 一下 8 + 古诗积累，新版目录）',
+        /^(CU){17}$/.test(g1yw.seq) && g1yw.names.length === 17,
         g1yw.seq + ' / ' + g1yw.names.length + ' 个');
     chk('一年级语文首条单元测试标为「第1单元」·副标题「识字（一）」',
         /第1单元/.test(g1yw.names[0] || '') && g1yw.subs[0] === '识字（一）',
