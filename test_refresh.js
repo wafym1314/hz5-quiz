@@ -113,33 +113,54 @@ const after = ids(api.getQuiz());
 chk('点「换一批」后题目发生变化', before !== after);
 chk('「换一批」后仍是 20 道', api.getQuiz().length === 20);
 
-// ---- 5b) 题量大的章节（数学 36 题）：应先把本章练完，不急着跨章节 ----
+// ---- 5b) 题量大的章节：应先把本章剩下的新题练完，不急着跨章节 ----
 console.log('');
-console.log('=== 题量大的章节（5 年级数学）===');
-const k5sx = api.key('5', 'sx');
-const chSx = api.QA[k5sx][0].c;
-const sxTotal = api.QA[k5sx].filter(q => q.c === chSx).length;
-api.setGrade('5');
-api.startChapter('sx', chSx);
-const m1 = api.getQuiz().slice();
-chk('首次进入 20 道且全本章', m1.length === 20 && m1.every(q => q.c === chSx), '本章共 ' + sxTotal + ' 题');
-m1.forEach(q => api.doneArr(k5sx).push(q.i));
-api.startChapter('sx', chSx);
-const m2 = api.getQuiz().slice();
-const m2ch = m2.filter(q => q.c === chSx).length;
-const m2new = m2.filter(q => m1.every(x => x.i !== q.i)).length;
-chk('第二次进入仍专注本章（先把本章剩余新题练完）', m2ch === 20, '本章 ' + m2ch + ' / 20');
-chk('第二次进入带来足量新题', m2new >= 10, '新题 ' + m2new + ' 道');
-m2.forEach(q => api.doneArr(k5sx).push(q.i));
-api.startChapter('sx', chSx);
-const m3 = api.getQuiz().slice();
-chk('本章全部练完后第三次进入仍给 20 道', m3.length === 20);
-// 2026-09-01 行为变更：本章练完后不再掺别的章节。
-// 以前这里断言「第三次进入含其它章节」，实际使用中表现为
-// 「明明在练第 1 课，突然冒出第 8 课的题」，用户明确反馈过，已改成严格锁死本章。
-chk('第三次进入仍全部来自本章（不再掺其它章节）',
-    m3.every(q => q.c === chSx),
-    '本章 ' + m3.filter(q => q.c === chSx).length + ' / ' + m3.length);
+console.log('=== 题量大的章节（自动挑选全库题量最大的章节）===');
+// 这道检查的**意图**是「某一章的题量多于一次抽题量（20 道）时，第二次进入
+// 应先补足本章剩下的新题」。原实现写死用「5 年级数学第 1 章」（当时有 36 题），
+// 而该章在 2026-09-10 按「每单元 20 题」整套重写后正好只剩 20 题，
+// 第二次进入必然没有新题，「新题 0 道」失败——是断言的前提过期了，不是功能坏了。
+// 现改为自动挑全库题量最大的章节（当前是 5en 的 en-8，52 题），
+// 题库将来扩容或收缩都不会再让这条断言失真；若全库确实没有 >20 题的章节，明确跳过。
+let big = null;
+Object.keys(api.QA).forEach(function (k) {
+  const cnt = {};
+  api.QA[k].forEach(function (q) { cnt[q.c] = (cnt[q.c] || 0) + 1; });
+  Object.keys(cnt).forEach(function (c) {
+    if (!big || cnt[c] > big.n) {
+      const g = /^(\d+)/.exec(k);
+      big = { n: cnt[c], key: k, code: c, grade: g ? g[1] : '', subj: c.split('-')[0] };
+    }
+  });
+});
+if (!big || big.n <= 20) {
+  console.log('  -  全库没有超过 20 题的章节，本组检查跳过（题库已按每章 20 题重建）');
+} else {
+  const kBig = big.key;
+  const chBig = big.code;
+  api.setGrade(big.grade);
+  api.startChapter(big.subj, chBig);
+  const m1 = api.getQuiz().slice();
+  chk('首次进入 20 道且全本章', m1.length === 20 && m1.every(q => q.c === chBig),
+      big.key + ' / ' + chBig + ' 本章共 ' + big.n + ' 题');
+  m1.forEach(q => api.doneArr(kBig).push(q.i));
+  api.startChapter(big.subj, chBig);
+  const m2 = api.getQuiz().slice();
+  const m2ch = m2.filter(q => q.c === chBig).length;
+  const m2new = m2.filter(q => m1.every(x => x.i !== q.i)).length;
+  chk('第二次进入仍专注本章（先把本章剩余新题练完）', m2ch === 20, '本章 ' + m2ch + ' / 20');
+  chk('第二次进入带来足量新题', m2new >= 10, '新题 ' + m2new + ' 道');
+  m2.forEach(q => api.doneArr(kBig).push(q.i));
+  api.startChapter(big.subj, chBig);
+  const m3 = api.getQuiz().slice();
+  chk('本章全部练完后第三次进入仍给 20 道', m3.length === 20);
+  // 2026-09-01 行为变更：本章练完后不再掺别的章节。
+  // 以前这里断言「第三次进入含其它章节」，实际使用中表现为
+  // 「明明在练第 1 课，突然冒出第 8 课的题」，用户明确反馈过，已改成严格锁死本章。
+  chk('第三次进入仍全部来自本章（不再掺其它章节）',
+      m3.every(q => q.c === chBig),
+      '本章 ' + m3.filter(q => q.c === chBig).length + ' / ' + m3.length);
+}
 
 // ---- 5b) 单元测试：跨该单元所有章节，且绝不超出单元范围 ----
 console.log('');

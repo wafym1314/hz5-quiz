@@ -183,7 +183,12 @@ async function backHome(page) {
       title: (document.getElementById('quizSubjectTitle') || {}).textContent || '',
     }));
     chk('点数学单元测试能进入做题页', mx.inQuiz);
-    chk('数学单元测试题量为 30', mx.n === 30, '实际 ' + mx.n);
+    /* 5sx 现在「一单元 = 一章 = 20 题」（2026-09-10 按每单元 20 题整套重写），
+       而单元测试的题量 = min(UNIT_TEST_SIZE=30, 本单元总题量)，
+       所以数学单元测试只能是 20 题。这里以前断言 30，是因为旧的 5sx 第 1 章有 30 道题；
+       改断言不是功能退化，而是章节题量标准化后单元池本来就只有 20 道。
+       语文/英语/科学一个单元含多课（题量远大于 30），那几科的单元测试仍是 30 题。 */
+    chk('数学单元测试题量 = min(30, 本单元题量) = 20', mx.n === 20, '实际 ' + mx.n);
     chk('数学单元测试覆盖本单元全部题（单单元）', mx.codes.length === 1, mx.codes.join(','));
     chk('标题标明是单元测试', mx.title.indexOf('单元测试') >= 0, mx.title);
     chk('能从数学单元测试退回主页', await backHome(page));

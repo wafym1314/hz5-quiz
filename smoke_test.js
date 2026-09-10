@@ -66,10 +66,11 @@ function assert(cond, msg){ if(!cond) throw new Error('断言失败: ' + msg); }
 // T1 题库结构
 assert(QA['5yw'] && QA['5yw'].length >= 400, '5yw 题量不足: ' + (QA['5yw']?QA['5yw'].length:0));
 // 注意：5sx 曾长期是「北师版 + 人教版备份」两套混在一起（构建脚本把 bank/new/*_backup.js
-// 也当正式题库加载了），那时候是 490 题。排除人教版污染后真实北师版题量是 370 题。
-// 阈值取 350~430：低于 350 说明题库丢了题，高于 430 说明人教版备份又被误加载了。
-assert(QA['5sx'] && QA['5sx'].length >= 350, '5sx 题量不足: ' + (QA['5sx']?QA['5sx'].length:0));
-assert(QA['5sx'] && QA['5sx'].length <= 430, '5sx 题量异常偏多（疑似人教版备份被误加载）: ' + (QA['5sx']?QA['5sx'].length:0));
+// 也当正式题库加载了），那时候是 490 题；排除污染后是 370 题。
+// 2026-09-10 又整套重写为 bank/new/g5sx.js（15 单元 × 20 题 = 300 题），
+// 因此阈值收紧到 290~320：低于 290 说明题库丢了题，高于 320 说明旧 bank/sx.js 或备份又被拼进来了。
+assert(QA['5sx'] && QA['5sx'].length >= 290, '5sx 题量不足: ' + (QA['5sx']?QA['5sx'].length:0));
+assert(QA['5sx'] && QA['5sx'].length <= 320, '5sx 题量异常（旧 bank/sx.js 或人教版备份疑似又被加载）: ' + (QA['5sx']?QA['5sx'].length:0));
 assert(QA['5en'] && QA['5en'].length >= 380, '5en 题量不足');
 console.log('✓ 题库结构正常（5yw='+QA['5yw'].length+' 5sx='+QA['5sx'].length+' 5en='+QA['5en'].length+'）');
 

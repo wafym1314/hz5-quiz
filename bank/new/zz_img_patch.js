@@ -1,87 +1,62 @@
-// 给「提到图却没有图」的已有题目补配图，按题号定位。
+// 给「题干提到图、但没配图」的题目补配图。
 // 文件名以 zz_ 开头 —— 保证在 bank/new/ 里最后被加载（前面的文件才建好 QA 各键）。
+// 配图 key 对应 assets/ 下的 SVG，由 build_imgs.js 内联进 index.html（离线可用）。
 //
-// 这些题原本只有「如图 / 下图」字样却没有图，属于内容缺陷；
-// 尤其一年级位置题（苹果在桌子的哪一面）没图根本无从作答。
-// 配图 key 对应 assets/ 下的 SVG，最终由 build_imgs.js 内联进 index.html（离线可用）。
+// ⚠ 历史大坑（2026-09-10 修）：
+//   本文件原来按「题号」定位（如 "1sx": {20:"g1sx/apple_front.svg"}），而那批题号
+//   指向的是 bank/new/g1sx_renjiao_backup.js 里的人教版旧题——该备份文件已不参与构建。
+//   人教版退出后，北师版新题沿用了同一批题号，补丁于是张冠李戴：
+//     · 1sx 有 17 道题被配上苹果/小猫/书的图，解析还被覆盖成
+//       「解析：图上苹果在桌子的前面，所以选「前」」——而题目问的其实是
+//       「比一比三根绳子的长短」；
+//     · 4sx 有 22 道题（如「1 个平角等于____度」）被挂上柱状统计图；
+//     · 5sx 的 6 个题号、4sx 的 12 个 rect_cut 题号在新题库里根本不存在（死映射）。
+//   教训：按题号打补丁，一旦题库重排就会静默错配。现改为按「题干特征文本」定位，
+//   并且只在题目自身没有配图时才补，题号变动也不会错配。
+//
+// 需求来源：6sci 有 10 道题题干写着「下图中……」，但原补丁里没有 6sci 这一组，
+//   assets/g6sci/ 下对应的 10 张 SVG 一直是「死资源」，学生看不到图就无从作答。
 if(!global.QA)global.QA={};
 (function(){
-  var PATCH = {
-    // [题号]: [配图key, 正确方位]  —— 同时改写原来那句空泛的解析
-    "1sx": {
-      20:  ["g1sx/apple_front.svg",  "前"],
-      53:  ["g1sx/apple_right.svg",  "右"],
-      139: ["g1sx/apple_front.svg",  "前"],
-      153: ["g1sx/apple_under.svg",  "下"],
-      211: ["g1sx/apple_left.svg",   "左"],
-      254: ["g1sx/apple_left.svg",   "左"],
-      21:  ["g1sx/cat_top.svg",      "上"],
-      80:  ["g1sx/cat_behind.svg",   "后"],
-      146: ["g1sx/cat_front.svg",    "前"],
-      232: ["g1sx/cat_left.svg",     "左"],
-      252: ["g1sx/cat_right.svg",    "右"],
-      257: ["g1sx/cat_behind.svg",   "后"],
-      44:  ["g1sx/book_top.svg",     "上"],
-      89:  ["g1sx/book_front.svg",   "前"],
-      105: ["g1sx/book_behind.svg",  "后"],
-      180: ["g1sx/book_right.svg",   "右"],
-      215: ["g1sx/book_under.svg",   "下"]
-    },
-    // [题号]: 配图key
-    "4sx": {
-      8:"g4sx/bar_chart.svg",   25:"g4sx/bar_chart.svg",   34:"g4sx/bar_chart.svg",
-      39:"g4sx/bar_chart.svg",  58:"g4sx/bar_chart.svg",   60:"g4sx/bar_chart.svg",
-      72:"g4sx/bar_chart.svg",  85:"g4sx/bar_chart.svg",   93:"g4sx/bar_chart.svg",
-      99:"g4sx/bar_chart.svg",  100:"g4sx/bar_chart.svg",  133:"g4sx/bar_chart.svg",
-      143:"g4sx/bar_chart.svg", 144:"g4sx/bar_chart.svg",  147:"g4sx/bar_chart.svg",
-      163:"g4sx/bar_chart.svg", 186:"g4sx/bar_chart.svg",  242:"g4sx/bar_chart.svg",
-      250:"g4sx/bar_chart.svg", 255:"g4sx/bar_chart.svg",  257:"g4sx/bar_chart.svg",
-      263:"g4sx/bar_chart.svg",
-      9003:"g4sx/rect_cut_8_12_5_1.svg",   9009:"g4sx/rect_cut_13_14_8_7.svg",
-      9026:"g4sx/rect_cut_8_12_3_2.svg",   9036:"g4sx/rect_cut_10_16_8_2.svg",
-      9046:"g4sx/rect_cut_15_18_6_3.svg",  9050:"g4sx/rect_cut_15_13_6_8.svg",
-      9057:"g4sx/rect_cut_12_10_6_8.svg",  9065:"g4sx/rect_cut_13_12_7_8.svg",
-      9074:"g4sx/rect_cut_7_9_4_2.svg",    9079:"g4sx/rect_cut_12_18_7_1.svg",
-      9090:"g4sx/rect_cut_9_18_6_4.svg",   9091:"g4sx/rect_cut_15_10_4_9.svg"
-    },
-    "5sx": {
-      860:"g5sx/line_chart.svg", 864:"g5sx/line_chart.svg", 866:"g5sx/line_chart.svg",
-      874:"g5sx/line_chart.svg", 878:"g5sx/line_chart.svg", 880:"g5sx/line_chart.svg"
-    },
-    "3sci": { 83:"g3sci/weather_snow.svg" },
-    "4en":  { 7:"g4en/picture_wall.svg" }
-  };
+  // 每条规则：pool（QA 键）+ key（题干里独一无二的特征文本）+ img（配图）
+  var RULES = [
+    ["6sci", "显微镜的总放大倍数",        "g6sci/microscope.svg"],
+    ["6sci", "洋葱表皮",                  "g6sci/cell.svg"],
+    ["6sci", "玻璃碎",                    "g6sci/changes.svg"],
+    ["6sci", "最容易生锈",                "g6sci/rust.svg"],
+    ["6sci", "月相变化的顺序",            "g6sci/moon_phases.svg"],
+    ["6sci", "地轴倾斜",                  "g6sci/earth_orbit.svg"],
+    ["6sci", "通电线圈绕在铁芯上",        "g6sci/electromagnet.svg"],
+    ["6sci", "太阳的光能进入植物体内",    "g6sci/energy.svg"],
+    ["6sci", "红色垃圾桶",                "g6sci/waste_sort.svg"],
+    ["6sci", "草→兔→狐",                  "g6sci/foodweb.svg"]
+  ];
 
-  var NAME = { apple:"苹果", cat:"小猫", book:"书" };
   var hit = 0, miss = [];
 
-  Object.keys(PATCH).forEach(function(k){
-    // 坑：旧版五年级数学在 bank/sx.js 里 push 到 QA.sx，要等所有 bank 文件加载完
-    // 才被迁移成 QA['5sx']。本文件跑在迁移之前，所以 5xx 的键要连旧名一起找，
-    // 否则像 5sx 的折线统计图题（i=860 等）会匹配不上。
-    var pools = [global.QA[k] || []];
-    if(k.charAt(0) === '5') pools.push(global.QA[k.slice(1)] || []);
-    var map = {};
-    pools.forEach(function(arr){ arr.forEach(function(q){ if(!map[q.i]) map[q.i] = q; }); });
-    Object.keys(PATCH[k]).forEach(function(id){
-      var q = map[id];
-      if(!q){ miss.push(k + ':' + id); return; }
-      var v = PATCH[k][id];
-      if(Object.prototype.toString.call(v) === '[object Array]'){
-        q.img = v[0];
-        var pos = v[1];
-        var obj = NAME[v[0].split('/')[1].split('_')[0]] || "物体";
-        q.e = "解析：图上" + obj + "在桌子的" + pos + "面，所以选「" + pos + "」。"
-            + "判断位置要先确定参照物（这里是桌子），再看物体落在它的上、下、左、右、前、后哪一面。";
-      } else {
-        q.img = v;
-      }
-      hit++;
-    });
+  RULES.forEach(function(r){
+    var pool = r[0], key = r[1], img = r[2];
+    var arr = global.QA[pool];
+    if(!arr){ miss.push(pool + '（整个题库键不存在）'); return; }
+    var q = null;
+    for(var i = 0; i < arr.length; i++){
+      if(!arr[i]) continue;
+      if(String(arr[i].q || '').indexOf(key) < 0) continue;
+      q = arr[i];
+      break;      // 特征文本够独特，取第一道匹配的即可
+    }
+    if(!q){ miss.push(pool + '：找不到题干含「' + key + '」的题'); return; }
+    if(q.img === img){ hit++; return; }
+    if(q.img && q.img !== img){
+      miss.push(pool + '：题干含「' + key + '」的题已配了别的图 ' + q.img);
+      return;
+    }
+    q.img = img;
+    hit++;
   });
 
   if(miss.length && typeof console !== "undefined" && console.warn){
-    console.warn('[zz_img_patch] 未匹配到的题号: ' + miss.join(', '));
+    console.warn('[zz_img_patch] 未匹配: ' + miss.join('; '));
   }
   if(typeof console !== "undefined" && console.log){
     console.log('[zz_img_patch] 已为 ' + hit + ' 道题补上配图');
