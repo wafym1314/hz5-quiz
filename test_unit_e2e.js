@@ -676,6 +676,25 @@ async function backHome(page) {
         /小数的意义和加减法/.test(g4sxUnit.subs[8] || ''), g4sxUnit.subs[8] || '');
     chk('能从四年级数学章节页退回主页', await backHome(page));
 
+    /* ===== 12.6) 四年级科学：人教鄂教版 四上 5 + 四下 6 = 11 单元，220 题 ===== */
+    await clickText(page, '.subj-card.sci', '科学');
+    await page.waitForTimeout(250);
+    const g4sci = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll(
+        '#chaptersBody .chapter-item, #chaptersBody .unit-item'));
+      const seq = rows.map(e => e.classList.contains('unit-item') ? 'U' : 'C').join('');
+      const subs = Array.from(document.querySelectorAll('#chaptersBody .unit-item .unit-sub'))
+        .map(e => e.textContent.trim());
+      return { seq, subs };
+    });
+    chk('四年级科学单元测试紧跟每章后面（11 组 CUCU，共 22 项）',
+        /^CU(CU)*$/.test(g4sci.seq) && g4sci.seq.length === 22, g4sci.seq);
+    chk('四年级科学首条单元测试副标题是「动植物的繁殖」（人教鄂教版四上第1单元）',
+        /动植物的繁殖/.test(g4sci.subs[0] || ''), g4sci.subs[0] || '');
+    chk('四年级科学第 6 单元是「天气与气候」（四下第1单元）',
+        /天气与气候/.test(g4sci.subs[5] || ''), g4sci.subs[5] || '');
+    chk('能从四年级科学章节页退回主页', await backHome(page));
+
     /* ===== 13) 六年级语文：2026-09-03 补全新版 U3/U5/U7 =====
        六上 8 单元 + 六下 5 单元 + 综合 1 = 14 章。新版第七单元「科学与思考」换掉了
        旧版「伯牙鼓琴/月光曲」；第 3 单元「有目的地阅读」、第 5 单元「围绕中心意思写」补全。 */
