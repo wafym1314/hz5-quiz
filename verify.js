@@ -82,13 +82,22 @@ console.log('配图校验通过 ✓（' + imgTotal + ' 道带图题目，' + Obj
 // ---- 合并到模板 ----
 const tpl = fs.readFileSync(path + '/index_template.html', 'utf8');
 if (tpl.indexOf('/*__BANK__*/') < 0) { console.error('模板中找不到占位符'); process.exit(1); }
-// 重新拼出 bank 源码（legacy + new），注入模板做兜底
-let bankSrc = '';
-global.QA = { yw:[], sx:[], en:[] };
-['yw1','yw2','yw3','yw4','yw5','sx','en1','en2','en3'].forEach(f => { bankSrc += fs.readFileSync(path + '/bank/' + f + '.js', 'utf8') + '\n'; });
-if (fs.existsSync(NEW_DIR)) {
-  fs.readdirSync(NEW_DIR).filter(isBankFile).forEach(f => { bankSrc += fs.readFileSync(NEW_DIR + '/' + f, 'utf8') + '\n'; });
-}
+// 从已处理的 global.QA 生成 bankSrc（而不是重新拼接原始文件）
+// 原始文件有 legacy（QA.yw.push）和 new（QA["1yw"].push）两种格式，
+// 直接拼接会导致 legacy 文件写入错误的键。
+let bankSrc = 'if(!window.QA)window.QA={};\n';
+Object.keys(global.QA).sort().forEach(k => {
+  const arr = global.QA[k];
+  if (!arr || arr.length === 0) return;
+  bankSrc += 'if(!window.QA["' + k + '"])window.QA["' + k + '"]=[];\n';
+  bankSrc += 'window.QA["' + k + '"].push(\n';
+  arr.forEach((q, idx) => {
+    bankSrc += '  ' + JSON.stringify(q);
+    if (idx < arr.length - 1) bankSrc += ',';
+    bankSrc += '\n';
+  });
+  bankSrc += ');\n';
+});
 if (tpl.indexOf('/*__IMGS__*/') < 0) { console.error('模板中找不到配图占位符 /*__IMGS__*/'); process.exit(1); }
 const out = tpl.replace('/*__IMGS__*/', imgSrc).replace('/*__BANK__*/', bankSrc);
 fs.writeFileSync(path + '/index.html', out, 'utf8');
