@@ -29,12 +29,21 @@ const env = Object.assign({}, process.env, {
 function run(label, cwd, script, opts) {
   opts = opts || {};
   const started = Date.now();
+  // ⚠️ 子进程输出必须写**文件**，不能用 pipe。
+  // e2e 测试会启动 chrome（node 的孙进程）。如果关浏览器那一步没走完，
+  // chrome 会继续持有继承来的 stdout 管道 —— 这时 node 其实早就退出了，
+  // 但 spawnSync 会一直等管道关闭，硬生生拖到 timeout，把「断言全过」的
+  // 跑次判成失败（2026-09-11 踩到：单独重定向到文件跑只要 66 秒，走 pipe 就 600 秒超时）。
+  const logFile = path.join(ROOT, 'out', 'run_' + path.basename(script, '.js') + '.log');
+  fs.mkdirSync(path.dirname(logFile), { recursive: true });
+  const fd = fs.openSync(logFile, 'w');
   const r = spawnSync(NODE, [script], {
     cwd, env: opts.env || process.env,
-    encoding: 'utf8', stdio: 'pipe',
+    stdio: ['ignore', fd, fd],
     timeout: opts.timeout || 300000,
   });
-  const out = ((r.stdout || '') + (r.stderr || '')).trim();
+  fs.closeSync(fd);
+  const out = fs.readFileSync(logFile, 'utf8').trim();
   const okRun = r.status === 0;
   if (opts.verbose) {
     console.log(out.split('\n').map(l => '    ' + l).join('\n'));

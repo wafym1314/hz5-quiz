@@ -134,7 +134,8 @@ async function finishBatch(page) {
     console.log('\n⚠ 看门狗：' + (WATCHDOG_MS / 1000) + ' 秒还没跑完，强制退出');
     process.exit(fail === 0 ? 0 : 1);
   }, WATCHDOG_MS);
-  watchdog.unref();
+  // 故意不 unref()：unref 的定时器在进程「看起来空闲」时可能不触发，
+  // 看门狗就不起作用了。这里保持引用，反正正常结束时显式 process.exit 会退出。
 
   const browser = await chromium.launch({ executablePath: CHROME, headless: true });
 
