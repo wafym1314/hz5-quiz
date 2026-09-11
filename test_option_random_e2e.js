@@ -104,6 +104,16 @@ const chk = (label, cond, extra) => {
 };
 
 (async () => {
+  // 看门狗：任何一步卡住（浏览器关不掉、某个 await 不返回）都会在这里兜底退出，
+  // 免得整组被拖到 runner 超时、把「断言其实全过」的跑次误判成失败。
+  // 断言跑完了就按断言结果退出，没跑完则记为失败。
+  const WATCHDOG_MS = 300000;
+  const watchdog = setTimeout(function () {
+    console.log('\n⚠ 看门狗：' + (WATCHDOG_MS / 1000) + ' 秒还没跑完，强制退出');
+    process.exit(fail === 0 ? 0 : 1);
+  }, WATCHDOG_MS);
+  watchdog.unref();
+
   const browser = await chromium.launch({ executablePath: CHROME, headless: true });
 
   for (const mode of list) {

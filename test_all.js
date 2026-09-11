@@ -110,17 +110,14 @@ if (want('--e2e')) {
         { env, timeout: 600000 })]);
   // 单元测试 / 年级顺序 / 章节排序 / 不跑题：2026-09-01 这轮新增。
   // 依赖 A:/dev/hzquiz-tv/assets/index.html，跑 --e2e 前需要先跑过一次 --tv 生成它。
-  // 这一组要 web + tv 两个目标 × 6 个年级 × 4 个科目，在真实浏览器里反复加载
-  // 1.5 MB 的 index.html 并翻章节页，是所有 e2e 里最慢的一组（web 约 8 分钟，加 tv 约 15 分钟）。
-  // 2026-09-11：它之前一直超时，有两个独立原因 ——
-  //   1) 断言跑完后 `browser.close()` 挂住不返回（上一组 e2e 残留的 chrome 进程），
-  //      已给四组 e2e 都加了「最多等 5 秒就走」的关闭保护；
-  //   2) 剩下的就是真的慢：两个目标全跑完要 15 分钟上下。故把超时放到 1200s。
-  // 注意：别让它和其它 e2e 并发跑，资源争抢会让它更慢、也会让
-  // test_option_random_e2e 的 χ² 检验偶发失败。
+  // 2026-09-11：这一组曾长期卡在 600s 超时，但**不是因为它慢** ——
+  // 清掉僵尸 chrome 之后实测只要 66 秒。真正的病根是断言跑完后
+  // `browser.close()` 挂住不返回（前面几组 e2e 留下的 chrome 进程）。
+  // 已给四组 e2e 统一加「最多等 5 秒就走」的关闭保护，这里恢复 600s 超时。
+  // 若这组分再超时，先去查是不是又残留了 chrome 进程，别急着加超时。
   results.push(['test_unit_e2e.js 单元测试与排序',
     run('test_unit_e2e.js 单元测试与排序', ROOT, path.join(ROOT, 'test_unit_e2e.js'),
-        { env, timeout: 1200000 })]);
+        { env, timeout: 600000 })]);
 }
 
 const bad = results.filter(r => !r[1]);
