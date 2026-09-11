@@ -255,7 +255,7 @@ QA["3en"].push(
 {i:235,c:"3en-12",ch:"三下·Unit 6 How many? 数字11-20",f:1,q:"数字 20 的英语是 ____。",o:[],a:"twenty",k:"填空：twenty",e:"解析：数字 20 的英语是 twenty，拼写为 t-w-e-n-t-y。"},
 {i:236,c:"3en-12",ch:"三下·Unit 6 How many? 数字11-20",f:0,d:2,q:"数字 15 后面的一个数字是？",o:["sixteen","fourteen","fifty","fifteen"],a:0,k:"拔高：11~20 的数序",e:"解析：按顺序 fourteen, fifteen, sixteen，15（fifteen）后面是 16（sixteen）。"},
 {i:237,c:"3en-12",ch:"三下·Unit 6 How many? 数字11-20",f:0,d:2,q:"数一数：桌上有 13 支铅笔，还想再拿 7 支，一共多少支？",o:["twenty","eighteen","seventeen","thirteen"],a:0,k:"拔高：数量相加 twenty",e:"解析：13 + 7 = 20，英语是 twenty。"},
-{i:238,c:"3en-12",ch:"三下·Unit 6 How many? 数字11-20",f:0,d:2,q:"下面哪个数字最大？",o:["nineteen","eleven","fifteen","twelve"],a:0,k:"拔高：11~20 大小比较",e:"解析：eleven=11, twelve=12, fifteen=15, nineteen=19，其中 nineteen 最大。"},
+{i:238,c:"3en-12",ch:"三下·Unit 6 How many? 数字11-20",f:0,d:2,q:"下列选项中，哪个数字最大？",o:["nineteen","eleven","fifteen","twelve"],a:0,k:"拔高：11~20 大小比较",e:"解析：eleven=11, twelve=12, fifteen=15, nineteen=19，其中 nineteen 最大。"},
 {i:239,c:"3en-12",ch:"三下·Unit 6 How many? 数字11-20",f:0,d:2,q:"“11 加 4 等于 15。”用英语怎么说？",o:["Eleven and four is fifteen.","Eleven and four is fifty.","Eleven and five is fifteen.","Eleven and four are fifteen."],a:0,k:"拔高：简单加法表达",e:"解析：11 + 4 = 15，英语中说 Eleven and four is fifteen.，主语视为整体时用 is。"},
 {i:240,c:"3en-1",ch:"三上·Unit 1 Hello! 打招呼与问候",f:0,d:2,q:"下面哪种情况最应该说“Good afternoon.”？",o:["下午三点在学校见到同学","晚上睡觉前","早上起床后","和别人分别时"],a:0,k:"拔高：按时间选择问候语",e:"解析：Good afternoon. 用于中午到傍晚之间；早上用 Good morning.，睡前用 Good night.，分别时用 Goodbye."},
 {i:241,c:"3en-2",ch:"三上·Unit 2 Colours 颜色",f:0,d:2,q:"把蓝色和黄色调在一起，会变成什么颜色？",o:["绿色","橙色","紫色","棕色"],a:0,k:"拔高：蓝黄调色",e:"解析：蓝（blue）+ 黄（yellow）调在一起是绿（green）；红+黄是橙，红+蓝是紫。"},
