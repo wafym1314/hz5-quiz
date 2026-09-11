@@ -187,7 +187,12 @@ async function enterQuiz(page){
   console.log('\n=== 控制台 ===');
   chk('页面无 JS 报错', errors.length === 0, errors.slice(0, 3).join(' | '));
 
-  await browser.close();
+  // 浏览器偶尔关不掉（上一组 e2e 残留的 chrome 进程会让它一直挂着）。
+  // 断言这时已经跑完，不该让一次关不掉就把整组判成失败 —— 最多等 5 秒就走。
+  await Promise.race([
+    browser.close().catch(() => {}),
+    new Promise(function (r) { setTimeout(r, 5000); })
+  ]);
   server.close();
   console.log('\n通过 ' + pass + ' 项，失败 ' + fail + ' 项');
   process.exit(fail ? 1 : 0);

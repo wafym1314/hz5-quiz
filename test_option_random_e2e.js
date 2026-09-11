@@ -163,7 +163,12 @@ const chk = (label, cond, extra) => {
     await ctx.close();
   }
 
-  await browser.close();
+  // 浏览器偶尔关不掉（上一组 e2e 残留的 chrome 进程会让它一直挂着）。
+  // 断言这时已经跑完，不该让一次关不掉就把整组判成失败 —— 最多等 5 秒就走。
+  await Promise.race([
+    browser.close().catch(() => {}),
+    new Promise(function (r) { setTimeout(r, 5000); })
+  ]);
   console.log('\n' + (fail === 0 ? '✅ 随机化统计验证通过' : '✗ 有 ' + fail + ' 项未通过'));
   process.exit(fail === 0 ? 0 : 1);
 })().catch(e => { console.error('崩溃:', e); process.exit(1); });

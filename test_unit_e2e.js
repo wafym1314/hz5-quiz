@@ -773,7 +773,12 @@ async function backHome(page) {
 
     chk('全程无 JS 报错', errors.length === 0, errors.slice(0, 3).join(' | '));
 
-    await browser.close();
+    // 浏览器偶尔关不掉（前面几组 e2e 留下的残留 chrome 进程会让它一直挂着）。
+    // 断言这时已经全部跑完，不该让一次关不掉就把整组判成失败 —— 最多等 5 秒就走。
+    await Promise.race([
+      browser.close().catch(() => {}),
+      new Promise(function (r) { setTimeout(r, 5000); })
+    ]);
   }
 
   console.log('');
