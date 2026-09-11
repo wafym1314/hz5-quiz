@@ -120,7 +120,7 @@ console.log('=== 题量大的章节（自动挑选全库题量最大的章节）
 // 应先补足本章剩下的新题」。原实现写死用「5 年级数学第 1 章」（当时有 36 题），
 // 而该章在 2026-09-10 按「每单元 20 题」整套重写后正好只剩 20 题，
 // 第二次进入必然没有新题，「新题 0 道」失败——是断言的前提过期了，不是功能坏了。
-// 现改为自动挑全库题量最大的章节（当前是 5en 的 en-8，52 题），
+// 现改为自动挑全库题量最大的章节（2026-09-10 起是 6sx 的 6sx-1，32 题），
 // 题库将来扩容或收缩都不会再让这条断言失真；若全库确实没有 >20 题的章节，明确跳过。
 let big = null;
 Object.keys(api.QA).forEach(function (k) {
@@ -128,8 +128,12 @@ Object.keys(api.QA).forEach(function (k) {
   api.QA[k].forEach(function (q) { cnt[q.c] = (cnt[q.c] || 0) + 1; });
   Object.keys(cnt).forEach(function (c) {
     if (!big || cnt[c] > big.n) {
-      const g = /^(\d+)/.exec(k);
-      big = { n: cnt[c], key: k, code: c, grade: g ? g[1] : '', subj: c.split('-')[0] };
+      // 章码有两种写法：「en-8」（不带年级）和「6sx-1」「5en-1」（带年级前缀）。
+      // 带前缀时要先把年级数字剥掉才能拿到科目名，否则 startChapter 会拿
+      // "6sx" 当科目拼出错误的 QA 键（key('6','6sx')）。
+      const m = /^(\d+)([a-z]+)-/.exec(c);
+      const g = m ? m[1] : (/^(\d+)/.exec(k) || [])[1];
+      big = { n: cnt[c], key: k, code: c, grade: g || '', subj: m ? m[2] : c.split('-')[0] };
     }
   });
 });

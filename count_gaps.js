@@ -8,7 +8,8 @@ global.QA = { yw:[], sx:[], en:[] };
 });
 const NEW_DIR = path + '/bank/new';
 if (fs.existsSync(NEW_DIR)) {
-  fs.readdirSync(NEW_DIR).filter(f => f.endsWith('.js')).forEach(f => {
+  // 必须排除 *_backup.js，否则人教版旧备份会混进统计（如 sx-1 假缺口）
+  fs.readdirSync(NEW_DIR).filter(f => f.endsWith('.js') && !/_backup\.js$/.test(f)).forEach(f => {
     eval(fs.readFileSync(NEW_DIR + '/' + f, 'utf8'));
   });
 }

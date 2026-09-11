@@ -71,7 +71,11 @@ assert(QA['5yw'] && QA['5yw'].length >= 400, '5yw 题量不足: ' + (QA['5yw']?Q
 // 因此阈值收紧到 290~320：低于 290 说明题库丢了题，高于 320 说明旧 bank/sx.js 或备份又被拼进来了。
 assert(QA['5sx'] && QA['5sx'].length >= 290, '5sx 题量不足: ' + (QA['5sx']?QA['5sx'].length:0));
 assert(QA['5sx'] && QA['5sx'].length <= 320, '5sx 题量异常（旧 bank/sx.js 或人教版备份疑似又被加载）: ' + (QA['5sx']?QA['5sx'].length:0));
-assert(QA['5en'] && QA['5en'].length >= 380, '5en 题量不足');
+// 2026-09-10 5en 整套重写为 bank/new/g5en.js（12 单元 × 20 题 = 240 题），旧 480 题
+// （en1~3.js 384 题 + g5en_hard.js 96 题超纲拔高）已停用，故阈值收紧到 230~250：
+// 低于 230 说明题库丢了题，高于 250 说明旧 legacy 题库或 g5en_hard 又被拼进来了。
+assert(QA['5en'] && QA['5en'].length >= 230, '5en 题量不足: ' + (QA['5en']?QA['5en'].length:0));
+assert(QA['5en'] && QA['5en'].length <= 250, '5en 题量异常（旧 en1~3.js 或 g5en_hard.js 疑似又被加载）: ' + (QA['5en']?QA['5en'].length:0));
 console.log('✓ 题库结构正常（5yw='+QA['5yw'].length+' 5sx='+QA['5sx'].length+' 5en='+QA['5en'].length+'）');
 
 // T2 主页渲染（年级标签 + 科目卡片）
@@ -135,10 +139,19 @@ assert(els['calGrid'].innerHTML, '日历渲染失败');
 console.log('✓ 打卡日历渲染正常');
 
 // T10 答错判分
+// 章码不能写死：5sx 重写后是「5sx-1」，旧代码里写的「sx-1」已不存在，
+// startChapter 会因抽不到题而直接 return，导致下面渲染的还是上一轮的题（断言虽过但没测到东西）。
+// 另外 startChapter 会随机抽题，抽到的第一题可能是填空题（填空题不渲染选项），
+// 那时 opts 为空，answer() 会越界崩掉。这里直接指定一道选择题，保证确定性。
 state.review[k5yw] = false;
-startChapter('sx','sx-1');
+var sxCode = QA['5sx'][0].c;
+startChapter('sx', sxCode);
+var sxSel = null;
+QA['5sx'].forEach(function(q){ if(q.c===sxCode && q.f===0 && !sxSel) sxSel = q; });
+assert(sxSel, '数学第一章应有选择题');
+quizQuestions = [sxSel]; quizIndex = 0; quizCorrect = 0;
 renderQuestion();
-const wrongIdx = (quizQuestions[quizIndex]._dc + 1) % quizQuestions[quizIndex].o.length;
+const wrongIdx = (sxSel._dc + 1) % sxSel.o.length;
 answer(wrongIdx);
 assert(quizCorrect === 0, '答错不应加分');
 assert(els['quizFeedback'].classList.contains('wrong'), '应显示答错反馈');
@@ -150,8 +163,10 @@ assert(els['exText'].textContent.indexOf('解析：') >= 0, '解析格式不正�
 console.log('✓ 答错也显示知识点与解析');
 
 // T12 填空题
+// 同理不写死章码：5en 重写后第一章是「5en-1」（旧代码写死 'en-1'）。
 var fillQ = null;
-QA['5en'].forEach(function(q){ if(q.c==='en-1' && q.f===1 && !fillQ) fillQ = q; });
+var en1Code = QA['5en'][0].c;
+QA['5en'].forEach(function(q){ if(q.c===en1Code && q.f===1 && !fillQ) fillQ = q; });
 assert(fillQ, '英语Unit1应有填空题');
 quizQuestions = [fillQ]; quizIndex = 0; quizCorrect = 0;
 renderQuestion();

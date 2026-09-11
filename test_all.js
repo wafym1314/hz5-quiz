@@ -110,9 +110,12 @@ if (want('--e2e')) {
         { env, timeout: 600000 })]);
   // 单元测试 / 年级顺序 / 章节排序 / 不跑题：2026-09-01 这轮新增。
   // 依赖 A:/dev/hzquiz-tv/assets/index.html，跑 --e2e 前需要先跑过一次 --tv 生成它。
+  // 这一组要逐个年级、逐个科目地在真实浏览器里翻章节页，是所有 e2e 里最慢的一组：
+  // 单独跑约需 8 分钟，但紧跟在其它 e2e 之后跑（浏览器/CPU 还没完全释放）会超过 600s 被误判失败。
+  // 2026-09-11：实测单独跑能全绿通过，故把超时放宽到 900s。
   results.push(['test_unit_e2e.js 单元测试与排序',
     run('test_unit_e2e.js 单元测试与排序', ROOT, path.join(ROOT, 'test_unit_e2e.js'),
-        { env, timeout: 600000 })]);
+        { env, timeout: 900000 })]);
 }
 
 const bad = results.filter(r => !r[1]);
