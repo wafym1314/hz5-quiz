@@ -20,31 +20,3 @@
      [选填] i=401494 , i=500045  「《宝葫芦的秘密》的作者是（ ）。」
      [选填] i=401515 , i=500047  「《巨人的花园》的作者是英国作家（ ）。」
      [选填] i=401535 , i=500049  「《海的女儿》的作者是丹麦作家（ ）。」
-6en：27 组同题干，多出 42 道
-     [选选选] i=9000 , i=9043 , i=9050  「He has ______ finished his homework.」
-     [选选] i=9001 , i=9016  「Let's ______ football after school.」
-     [选选] i=9002 , i=9012  「She ______ English for three years.」
-     [选选] i=9004 , i=9067  「He runs ______ than anyone else in his class.」
-     [选选选] i=9005 , i=9017 , i=9064  「— ______ is it from here to the zoo? — About 5」
-     [选选] i=9006 , i=9034  「I have ______ to tell you.」
-     [选选] i=9007 , i=9035  「I have two pens. One is red, ______ is blue.」
-     [选选] i=9008 , i=9047  「He is too tired ______ any more.」
-     [选选选] i=9009 , i=9058 , i=9066  「This is the museum ______ we visited last week」
-     [选选选选] i=9011 , i=9026 , i=9068 , i=9074  「______ beautiful the flower is!」
-     [选选] i=9014 , i=9044  「My father ______ a car to work every day.」
-     [选选选选] i=9015 , i=9028 , i=9051 , i=9075  「We ______ to the park if it doesn't rain tomor」
-     [选选选] i=9018 , i=9046 , i=9057  「I'm not good ______ English.」
-     [选选选选] i=9019 , i=9039 , i=9063 , i=9073  「He ______ his homework at this time yesterday.」
-     [选选] i=9021 , i=9077  「She is ______ girl in our class.」
-     [选选选] i=9022 , i=9037 , i=9079  「He is ______ honest boy.」
-     [选选] i=9023 , i=9038  「This is the boy ______ father is a doctor.」
-     [选选选] i=9024 , i=9033 , i=9045  「He ______ to school by bike every day.」
-     [选选] i=9025 , i=9040  「There are two ______ in the picture.」
-     [选选] i=9027 , i=9076  「— ______ do you go to the library? — Twice a w」
-     [选选] i=9029 , i=9048  「I'd like ______ a cup of tea.」
-     [选选] i=9030 , i=9032  「He is interested ______ science.」
-     [选选] i=9036 , i=9060  「The little boy is afraid ______ dogs.」
-     [选选选] i=9041 , i=9054 , i=9071  「He ______ in Beijing since 2010.」
-     [选选选] i=9042 , i=9056 , i=9069  「The hospital is ______ the bank and the school」
-     [选选选] i=9053 , i=9059 , i=9072  「It took me two hours ______ my homework.」
-     [选选] i=9055 , i=9070  「— What's the weather ______ today? — It's sunn」
